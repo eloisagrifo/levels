@@ -48,19 +48,18 @@ ghost(Complex) := (F) -> (
 -- This function computes the level of G with respect to R
 level = method(TypicalValue => ZZ, Options => {MaxLevelAttempts => 100})
 level(Complex) := ZZ => opts -> (G) -> (
-	if isExact G then return 0;
-	
 	-- We need G to be a complex of free/projective modules, so that any map from G is zero iff it is null homotopic
 	G = resolution G;
 	
-	n := 1;
-	f := ghost G;
+	n := 0;
+	f := id_G;
 	g := f;
 	-- As long as the composition of the ghost maps g is non-zero, continue
 	while ((not isNullHomotopic g) and (n < opts.MaxLevelAttempts)) do (
 		f = ghost f.target;
+		f = (minimize f.target).cache.minimizingMap * f;
 		g = f*g;
-		n = n+1
+		n = n+1;
 	);
 	n
 )
