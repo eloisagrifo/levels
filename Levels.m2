@@ -136,39 +136,39 @@ TEST ///
 
 
 TEST ///
-    	loadPackage "Complexes"
+    	needsPackage(Complexes)
 	R = QQ[x,y,z]
 	F = freeResolution (R^2)
 	assert(level F == 1)
 ///
 
 TEST ///
+	needsPackage(Complexes)
 	R = QQ[x,y,z]/ideal(x*y*z)
-	loadPackage "Complexes"
 	G = freeResolution (R^2)
 	F = G ++ G[1] ++ G[-1]
 	assert(level F == 1)
 ///
 
 TEST ///
+	needsPackage(Complexes)
 	R = QQ[x,y,z]
-	loadPackage "Complexes"
 	I = ideal vars R
 	F = freeResolution(R^1/I)
 	assert(level F == 4)
 ///
 
 TEST ///
+    	needsPackage(Complexes)
 	R = QQ[x,y,z]
-	loadPackage "Complexes"
 	I = ideal vars R
 	F = freeResolution(R^1/I)[-3]
 	assert(level F == 4)
 ///
 
 TEST ///
+    	needsPackage(Complexes)
 	R = QQ[x,y,z]
-	loadPackage "Complexes"
 	I = ideal vars R
 	F = freeResolution(R^1/I^2)
 	assert(level F == 4)
