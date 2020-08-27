@@ -1,10 +1,11 @@
 newPackage(
 	"Levels",
 	Version => "1.0", 
-	Date => "August 19, 2020",
+	Date => "August 27, 2020",
 	Authors => {
 		{Name => "Eloisa Grifo", Email => "eloisa.grifo@ucr.edu", HomePage => "http://www-personal.umich.edu/~grifo/"},
-		{Name => "Janina C. Letz", Email => "jletz@math.uni-bielefeld.de", HomePage => "http://www.math.uni-bielefeld.de/~jletz"}
+		{Name => "Janina C. Letz", Email => "jletz@math.uni-bielefeld.de", HomePage => "http://www.math.uni-bielefeld.de/~jletz"},
+		{Name => "Josh Pollitz", Email => "pollitz@math.utah.edu", HomePage => "http://www.math.utah.edu/~pollitz"}
 	},
 	Headline => "Computing levels of complexes",
 	DebuggingMode => true
