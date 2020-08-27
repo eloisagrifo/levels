@@ -38,6 +38,15 @@ I = ideal vars R
 F = complex(R^1/I)
 assert(level F === 2)
 
+<<<<<<< HEAD
+----local stuff
+path=append(path,"~/Documents/EJJ/levels");
+installPackage "Levels"
+
+
+f=ghost(F)
+isNullHomotopic f
+=======
 
 uninstallPackage "Complexes"
 uninstallPackage "Levels"
@@ -47,3 +56,4 @@ installPackage "Levels"
 check "Levels"
 R = QQ[x]
 ghost(R^1)
+>>>>>>> 7ba705011522f72d3afc94c4618390bed1a99c43
