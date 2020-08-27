@@ -53,7 +53,10 @@ uninstallPackage "Levels"
 restart
 path = append(path,"~/Documents/GitHub/levels");
 installPackage "Levels"
+installPackage "Complexes"
+loadPackage "Complexes"
 check "Levels"
 R = QQ[x]
 ghost(R^1)
+freeResolution(R^1)
 >>>>>>> 7ba705011522f72d3afc94c4618390bed1a99c43
