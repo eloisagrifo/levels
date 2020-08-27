@@ -98,7 +98,7 @@ document{
 	Headline => "compute the level with respect to the ring",
 	Usage => "level F",
 	Inputs => {
-		{TT "F",", a chain complex"}
+		{TT "F",", a complex"}
 	},
 	Outputs => {
 		{"an integer, the level of ", TT "F"}
@@ -127,37 +127,50 @@ document{
 -- level
 -----------------------------------------------------------
 
+
+
 TEST ///
 	R = QQ[x,y,z]
-	F = resolution R^2
+	assert(level(R^1) == 1)
+///
+
+
+TEST ///
+    	loadPackage "Complexes"
+	R = QQ[x,y,z]
+	F = freeResolution (R^2)
 	assert(level F == 1)
 ///
 
 TEST ///
 	R = QQ[x,y,z]/ideal(x*y*z)
-	G = resolution R^2
+	loadPackage "Complexes"
+	G = freeResolution (R^2)
 	F = G ++ G[1] ++ G[-1]
-	assert(level F == 1
+	assert(level F == 1)
 ///
 
 TEST ///
 	R = QQ[x,y,z]
+	loadPackage "Complexes"
 	I = ideal vars R
-	F = koszul mingens I
+	F = freeResolution(R^1/I)
 	assert(level F == 4)
 ///
 
 TEST ///
 	R = QQ[x,y,z]
+	loadPackage "Complexes"
 	I = ideal vars R
-	F = (koszul mingens I)[-3]
+	F = freeResolution(R^1/I)[-3]
 	assert(level F == 4)
 ///
 
 TEST ///
 	R = QQ[x,y,z]
+	loadPackage "Complexes"
 	I = ideal vars R
-	F = koszul mingens (I^2)
+	F = freeResolution(R^1/I^2)
 	assert(level F == 4)
 ///
 

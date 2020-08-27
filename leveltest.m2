@@ -44,5 +44,6 @@ uninstallPackage "Levels"
 restart
 path = append(path,"~/Documents/GitHub/levels");
 installPackage "Levels"
+check "Levels"
 R = QQ[x]
 ghost(R^1)
