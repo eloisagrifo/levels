@@ -37,3 +37,12 @@ R = QQ[x]
 I = ideal vars R
 F = complex(R^1/I)
 assert(level F === 2)
+
+
+uninstallPackage "Complexes"
+uninstallPackage "Levels"
+restart
+path = append(path,"~/Documents/GitHub/levels");
+installPackage "Levels"
+R = QQ[x]
+ghost(R^1)

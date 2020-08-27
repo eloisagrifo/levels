@@ -44,6 +44,9 @@ ghost(Complex) := (F) -> (
 	-- Return the map F -> G
 	canonicalMap(G,F)
 )
+ghost(Module) := M -> (
+	ghost(complex M)
+)
 
 -- This function computes the level of G with respect to R
 level = method(TypicalValue => ZZ, Options => {MaxLevelAttempts => 100})
@@ -62,6 +65,9 @@ level(Complex) := ZZ => opts -> (G) -> (
 		n = n+1;
 	);
 	n
+)
+level(Module) := ZZ => opts -> (M) -> (
+	level(complex(M), MaxLevelAttempts => opts.MaxLevelAttempts)
 )
 
 -----------------------------------------------------------
