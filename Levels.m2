@@ -49,6 +49,30 @@ ghost(Module) := M -> (
 	ghost(complex M)
 )
 
+ghost(Complex,Complex) := (G,X) -> (
+	R := ring G;
+	
+	H := Hom(G,X);
+	
+	g := {};
+	-- Find generators of H: maps f_i: G[n_i] -> X
+	for i from min H to max H do (
+		Q := cover ker H.dd_i;
+		-- induced module map Q -> H_i
+		h := inducedMap(H_i,ker H.dd_i)*map(ker H.dd_i,Q,id_Q);
+		f := {};
+		for j from 0 to rank Q-1 do (
+			-- complex map R^1[-i] -> H picking out the jth generator in degree i
+			g := map(H,(complex R^1)[-i],k -> if k==-i then map(H_i,R^1,h*(id_Q)_{j}));
+			f = append(f,homomorphism g);
+		);
+		-- Combine f's to a map (directsum_j G[-i] -> X)
+		-- Append this map to g
+	);
+	-- Combine g's to a map (directsum_(i,j) G[-i] -> X)
+	-- Return this map
+)
+
 -- This function computes the level of G with respect to R
 level = method(TypicalValue => ZZ, Options => {MaxLevelAttempts => 100})
 level(Complex) := ZZ => opts -> (G) -> (
@@ -136,7 +160,7 @@ TEST ///
 
 
 TEST ///
-    	needsPackage "Complexes"
+	needsPackage "Complexes"
 	R = QQ[x,y,z]
 	F = freeResolution (R^2)
 	assert(level F == 1)
@@ -159,7 +183,7 @@ TEST ///
 ///
 
 TEST ///
-    	needsPackage "Complexes"
+	needsPackage "Complexes"
 	R = QQ[x,y,z]
 	I = ideal vars R
 	F = freeResolution(R^1/I)[-3]
@@ -167,7 +191,7 @@ TEST ///
 ///
 
 TEST ///
-    	needsPackage "Complexes"
+	needsPackage "Complexes"
 	R = QQ[x,y,z]
 	I = ideal vars R
 	F = freeResolution(R^1/I^2)
