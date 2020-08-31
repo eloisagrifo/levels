@@ -39,7 +39,7 @@ ghost(Complex) := (F) -> (
 	-- Construct map Q -> F
 	fun := i -> if (i >= min F or i <= max F) then inducedMap(F_i,ker F.dd_i)*map(ker F.dd_i,Q_i,id_(Q_i)) else map(R^0,F_i);
 	
-	-- Take the cone, and make it minimal
+	-- Take the cone
 	G := cone(map(F,Q,fun));
 	
 	-- Return the map F -> G
@@ -54,23 +54,20 @@ ghost(Complex,Complex) := (G,X) -> (
 	
 	H := Hom(G,X);
 	
-	g := {};
+	-- This going to be the approximation
+	f := map(X,complex R^0,0);
 	-- Find generators of H: maps f_i: G[n_i] -> X
 	for i from min H to max H do (
 		Q := cover ker H.dd_i;
 		-- induced module map Q -> H_i
 		h := inducedMap(H_i,ker H.dd_i)*map(ker H.dd_i,Q,id_Q);
-		f := {};
 		for j from 0 to rank Q-1 do (
 			-- complex map R^1[-i] -> H picking out the jth generator in degree i
 			g := map(H,(complex R^1)[-i],k -> if k==-i then map(H_i,R^1,h*(id_Q)_{j}));
-			f = append(f,homomorphism g);
+			f = f | map(X,G[-i],(map(X[i],G,homomorphism g,Degree => 0)[-i]));
 		);
-		-- Combine f's to a map (directsum_j G[-i] -> X)
-		-- Append this map to g
 	);
-	-- Combine g's to a map (directsum_(i,j) G[-i] -> X)
-	-- Return this map
+	canonicalMap(cone(f),X)
 )
 
 -- This function computes the level of G with respect to R
@@ -93,6 +90,24 @@ level(Complex) := ZZ => opts -> (G) -> (
 )
 level(Module) := ZZ => opts -> (M) -> (
 	level(complex(M), MaxLevelAttempts => opts.MaxLevelAttempts)
+)
+-- Compute level of X wrt G
+level(Complex,Complex) := ZZ => opts -> (G,X) -> (
+	-- We need X to be a complex of free/projective modules, so that any map from X is zero iff it is null homotopic
+	X = resolution X;
+	G = resolution G;
+	
+	n := 0;
+	f := id_X;
+	g := f;
+	-- As long as the composition of the ghost maps g is non-zero, continue
+	while ((not isNullHomotopic g) and (n < opts.MaxLevelAttempts)) do (
+		f = ghost(G,f.target);
+		f = (minimize f.target).cache.minimizingMap * f;
+		g = f*g;
+		n = n+1;
+	);
+	n
 )
 
 -----------------------------------------------------------
