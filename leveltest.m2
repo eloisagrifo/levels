@@ -107,3 +107,41 @@ R = QQ[x]
 ghost(R^1)
 freeResolution(R^1)
 >>>>>>> 7ba705011522f72d3afc94c4618390bed1a99c43
+
+
+
+--Testing level wrt G
+uninstallPackage "Levels"
+restart
+path = append(path,"~/Documents/GitHub/levels");
+installPackage "Levels"
+installPackage "Complexes"
+R = QQ[x,y]
+G = freeResolution(R^1/ideal(x))
+X = freeResolution(R^1/ideal(x,y^2))
+time level(X,G, MaxLevelAttempts => 3) -- takes 20 secs already
+time level(X,G, MaxLevelAttempts => 5) --
+ghost(X,G)
+
+
+--testing the function carefully:
+rX = resolution X
+rG = resolution G
+n = 0
+f = id_(rX)
+g = f
+--the actual contents of the while to run separately
+not isNullHomotopic g
+f = ghost(rG,f.target);
+f = (minimize f.target).cache.minimizingMap * f;
+g = f*g;
+n = n+1;
+
+     
+time	while ((not isNullHomotopic g) and (n < 10)) do (
+		f = ghost(rG,f.target);
+		f = (minimize f.target).cache.minimizingMap * f;
+		g = f*g;
+		n = n+1;
+	);
+	n

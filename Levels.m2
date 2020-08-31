@@ -49,6 +49,7 @@ ghost(Module) := M -> (
 	ghost(complex M)
 )
 
+-*
 ghost(Complex,Complex) := (G,X) -> (
 	R := ring G;
 	
@@ -67,6 +68,30 @@ ghost(Complex,Complex) := (G,X) -> (
 			f = f | map(X,G[-i],(map(X[i],G,homomorphism g,Degree => 0)[-i]));
 		);
 	);
+	canonicalMap(cone(f),X)
+)
+*-
+ghost(Complex,Complex) := (G,X) -> (
+	R := ring G;
+	
+	H := Hom(G,X);
+	
+	-- This going to be the approximation
+	f := map(X,complex R^0,0);
+	-- Find generators of H: maps f_i: G[n_i] -> X
+	L := {f};
+	for i from min H to max H do (
+	    	K := ker H.dd_i;
+		Q := cover K;
+		-- induced module map Q -> H_i
+		h := inducedMap(H_i,K)*map(K,Q,id_Q);
+		for j from 0 to rank Q-1 do (
+			-- complex map R^1[-i] -> H picking out the jth generator in degree i
+			g := map(H,(complex R^1)[-i],k -> if k==-i then map(H_i,R^1,h*(id_Q)_{j}));
+			L = append(L,map(X,G[-i],(map(X[i],G,homomorphism g,Degree => 0)[-i])));
+		);
+	);
+    	f = fold((a,b) -> a | b,L);
 	canonicalMap(cone(f),X)
 )
 
@@ -94,9 +119,8 @@ level(Module) := ZZ => opts -> (M) -> (
 -- Compute level of X wrt G
 level(Complex,Complex) := ZZ => opts -> (G,X) -> (
 	-- We need X to be a complex of free/projective modules, so that any map from X is zero iff it is null homotopic
-	rX = resolution X;
-	rG = resolution G;
-	
+	rX := resolution X;
+	rG := resolution G;	
 	n := 0;
 	f := id_(rX);
 	g := f;
