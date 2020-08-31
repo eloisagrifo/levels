@@ -94,15 +94,15 @@ level(Module) := ZZ => opts -> (M) -> (
 -- Compute level of X wrt G
 level(Complex,Complex) := ZZ => opts -> (G,X) -> (
 	-- We need X to be a complex of free/projective modules, so that any map from X is zero iff it is null homotopic
-	X = resolution X;
-	G = resolution G;
+	rX = resolution X;
+	rG = resolution G;
 	
 	n := 0;
-	f := id_X;
+	f := id_(rX);
 	g := f;
 	-- As long as the composition of the ghost maps g is non-zero, continue
 	while ((not isNullHomotopic g) and (n < opts.MaxLevelAttempts)) do (
-		f = ghost(G,f.target);
+		f = ghost(rG,f.target);
 		f = (minimize f.target).cache.minimizingMap * f;
 		g = f*g;
 		n = n+1;
