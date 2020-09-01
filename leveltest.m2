@@ -136,7 +136,7 @@ f = ghost(rG,f.target);
 f = (minimize f.target).cache.minimizingMap * f
 g = f*g
 n = n+1;
-
+level(X)
 
 
 
