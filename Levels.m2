@@ -97,25 +97,6 @@ ghost(Complex,Complex) := (G,X) -> (
 
 -- This function computes the level of G with respect to R
 level = method(TypicalValue => ZZ, Options => {MaxLevelAttempts => 100})
-level(Complex) := ZZ => opts -> (G) -> (
-	-- We need G to be a complex of free/projective modules, so that any map from G is zero iff it is null homotopic
-	G = resolution G;
-	
-	n := 0;
-	f := id_G;
-	g := f;
-	-- As long as the composition of the ghost maps g is non-zero, continue
-	while ((not isNullHomotopic g) and (n < opts.MaxLevelAttempts)) do (
-		f = ghost f.target;
-		f = (minimize f.target).cache.minimizingMap * f;
-		g = f*g;
-		n = n+1;
-	);
-	n
-)
-level(Module) := ZZ => opts -> (M) -> (
-	level(complex(M), MaxLevelAttempts => opts.MaxLevelAttempts)
-)
 -- Compute level of X wrt G
 level(Complex,Complex) := ZZ => opts -> (G,X) -> (
 	-- We need X to be a complex of free/projective modules, so that any map from X is zero iff it is null homotopic
@@ -133,6 +114,26 @@ level(Complex,Complex) := ZZ => opts -> (G,X) -> (
 	);
 	n
 )
+--compute level wrt R
+level(Complex) := ZZ => opts -> (G) -> (
+	-- We need G to be a complex of free/projective modules, so that any map from G is zero iff it is null homotopic
+	G = resolution G;	
+	n := 0;
+	f := id_G;
+	g := f;
+	-- As long as the composition of the ghost maps g is non-zero, continue
+	while ((not isNullHomotopic g) and (n < opts.MaxLevelAttempts)) do (
+		f = ghost f.target;
+		f = (minimize f.target).cache.minimizingMap * f;
+		g = f*g;
+		n = n+1;
+	);
+	n
+)
+level(Module) := ZZ => opts -> (M) -> (
+	level(complex(M), MaxLevelAttempts => opts.MaxLevelAttempts)
+)
+
 
 -----------------------------------------------------------
 -----------------------------------------------------------
@@ -156,6 +157,7 @@ document{
 	SUBSECTION "Contributors", "The following people have generously contributed code or worked on our code at various Macaulay2 workshops.",
 }
 
+-*
 document{
 	Key => level,
 	Headline => "compute the level with respect to the ring",
@@ -167,6 +169,52 @@ document{
 		{"an integer, the level of ", TT "F"}
 	}
 }
+*-
+
+
+doc ///
+     Key
+       level
+       (level, Complex)
+       (level, Complex, Complex)
+       (level, Module)
+     Headline
+       computes the level of a complex with respect to another complex, or the ring by default
+     Usage
+       level(X)
+       level(X,G)
+       level(M)
+     Inputs
+        X:Complex
+    	G:Complex -- if no G is provided, G is assumed to be the underlying ring
+        M:Module -- M is replaced with the corresponding complex
+     Outputs
+       :ZZ
+           the level of X with respect to G
+   Description
+       Example
+           R = QQ[x,y,z]
+	   needsPackage("Complexes");
+     	   F = complex(R^0)
+    	   level(F)
+       Example
+           R = QQ[x,y]
+     	   M = R^1/ideal(x,y)
+    	   level(M)
+   SeeAlso
+       ghost
+///
+
+-*
+       Example
+           R = QQ[x,y]
+	   needsPackage("Complexes");
+	   F = complex(R^0)
+	   G = freeResolution(R^1/ideal(x))
+	   X = freeResolution(R^1/ideal(x,y^2))
+	   level(X,G)   
+*-
+
 
 document{
 	Key => ghost,

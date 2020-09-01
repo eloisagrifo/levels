@@ -114,11 +114,36 @@ freeResolution(R^1)
 uninstallPackage "Levels"
 restart
 path = append(path,"~/Documents/GitHub/levels");
+installPackage "Complexes";
 installPackage "Levels"
-installPackage "Complexes"
 R = QQ[x,y]
 G = freeResolution(R^1/ideal(x))
 X = freeResolution(R^1/ideal(x,y^2))
+time level(X,complex(R^1), MaxLevelAttempts => 2) --0.2secs
+time level(X,complex(R^1), MaxLevelAttempts => 3) --5 secs
+time level(X,complex(R^1), MaxLevelAttempts => 4) -- more than 125 secs 
+
+X = freeResolution(R^1/ideal(x,y^2))
+G = complex(R^1)
+rX = resolution X;
+rG = resolution G;	
+n = 0;
+f = id_(rX);
+g = f;
+--while:
+(not isNullHomotopic g)
+f = ghost(rG,f.target);
+f = (minimize f.target).cache.minimizingMap * f
+g = f*g
+n = n+1;
+
+
+
+
+
+time level(X,G, MaxLevelAttempts => 5) --
+ghost(X,G)
+
 time level(X,G, MaxLevelAttempts => 3) -- takes 20 secs already
 time level(X,G, MaxLevelAttempts => 5) --
 ghost(X,G)
