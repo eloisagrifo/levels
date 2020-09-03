@@ -144,17 +144,24 @@ level(Complex,Module) := ZZ => opts -> (M,N) -> (
     level(M,complex(N), MaxLevelAttempts => opts.MaxLevelAttempts)
     )
 
---detect whether a complex is perfect
+--detects whether a complex is perfect
 isPerfect=method();
 isPerfect(Complex) := (F) -> (
+    --First make the ring and its residue field for the complex M
     R := ring F;
     m := ideal(vars R);
     k := complex(R^1/m);
+    --Define the one homological degree we check is zero
     d := dim(R)+max(F)+1;
+    --Compute Tor^R_d(M,k)
     G := resolution(F);
     T := tensor(G,k);
-    HH_d(T)==0   
+    HH_d(T)==0   --If true, then M is perfect; otherwise, M is not perfect over R
 )
+--detects whether a module is perfect
+isPerfect(Module) := (M) -> (
+    isPerfect(complex(M))
+    )
 -----------------------------------------------------------
 -----------------------------------------------------------
 -- Documentation
