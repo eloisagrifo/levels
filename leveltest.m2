@@ -167,7 +167,7 @@ for i from min H to max H do (
 		h := inducedMap(H_i,K)*map(K,Q,id_Q);
 		for j from 0 to rank Q-1 do (
 			-- complex map R^1[-i] -> H picking out the jth generator in degree i
-			g := map(H,(complex R^1)[-i],k -> if k==-i then map(H_i,R^1,h*(id_Q)_{j}));
+			g := map(H,(complex R^1)[-i],k -> if k==i then map(H_i,R^1,h*(id_Q)_{j}));
 			L = append(L,map(X,G[-i],(map(X[i],G,homomorphism g,Degree => 0)[-i])));
 		);
 	);
@@ -176,6 +176,9 @@ for i from min H to max H do (
 
 
 
+--May be the problem: shifting maps
+g := map(H,(complex R^1)[-i],k -> if k==-i then map(H_i,R^1,h*(id_Q)_{j}));
+map(X,G[-i],(map(X[i],G,homomorphism g,Degree => 0)[-i])));
 
 
 
@@ -209,3 +212,60 @@ time	while ((not isNullHomotopic g) and (n < 10)) do (
 		n = n+1;
 	);
 	n
+
+
+
+
+
+--more testing wrt G
+uninstallPackage "Levels"
+restart
+path = append(path,"~/Documents/GitHub/levels");
+installPackage "Complexes";
+installPackage "Levels"
+R = QQ[x_1 .. x_6]
+M = complex(R^1/minors(2,matrix{{x_1, x_2, x_3},{x_4, x_5, x_6}}))
+N = complex(R^1/ideal(x_1,x_2,x_3))
+time level(N,M)
+
+
+
+
+--more testing wrt G
+uninstallPackage "Levels"
+restart
+path = append(path,"~/Documents/GitHub/levels");
+installPackage "Complexes";
+installPackage "Levels"
+R = QQ[x]
+--answer is 3
+N = complex(R^1/ideal(x^3))
+M = complex(R^1/ideal(x^7))
+time level(N,M)
+	-- We need X to be a complex of free/projective modules, so that any map from X is zero iff it is null homotopic
+	rX = resolution k;
+	rG  = resolution k;	
+	n  = 0;
+	f := id_(rX);
+	g := f;
+	-- As long as the composition of the ghost maps g is non-zero, continue
+	while ((not isNullHomotopic g) and (n < opts.MaxLevelAttempts)) do (
+		f = ghost(rG,f.target);
+		f = (minimize f.target).cache.minimizingMap * f;
+		g = f*g;
+		n = n+1;
+	);
+	n
+)
+
+
+--more testing wrt G
+uninstallPackage "Levels"
+restart
+path = append(path,"~/Documents/GitHub/levels");
+installPackage "Complexes";
+installPackage "Levels"
+R = QQ[x,y]
+M = R^1/ideal(x^2,y^2)
+N = R^1/ideal(x,y)
+time level()
