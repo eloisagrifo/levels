@@ -143,6 +143,18 @@ level(Complex,Module) := ZZ => opts -> (M,N) -> (
     level(M,complex(N), MaxLevelAttempts => opts.MaxLevelAttempts)
     )
 
+--detect whether a complex is perfect
+isPerfect=method();
+isPerfect(Complex) := (F) -> (
+    R := ring F;
+    m := ideal(vars R);
+    k := R^1/m;
+    k := complex(k);
+    d := dim(R)+max(F)+1;
+    G := resolution(F);
+    T := tensor(G,k);
+    HH_d(T)==0   
+)
 -----------------------------------------------------------
 -----------------------------------------------------------
 -- Documentation
