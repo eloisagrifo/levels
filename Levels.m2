@@ -133,7 +133,15 @@ level(Complex) := ZZ => opts -> (G) -> (
 level(Module) := ZZ => opts -> (M) -> (
 	level(complex(M), MaxLevelAttempts => opts.MaxLevelAttempts)
 )
-
+level(Module,Module) := ZZ => opts -> (M,N) -> (
+    level(complex(M),complex(N), MaxLevelAttempts => opts.MaxLevelAttempts)
+    )
+level(Module,Complex) := ZZ => opts -> (M,N) -> (
+    level(complex(M),N, MaxLevelAttempts => opts.MaxLevelAttempts)
+    )
+level(Complex,Module) := ZZ => opts -> (M,N) -> (
+    level(M,complex(N), MaxLevelAttempts => opts.MaxLevelAttempts)
+    )
 
 -----------------------------------------------------------
 -----------------------------------------------------------
@@ -178,6 +186,9 @@ doc ///
        (level, Complex)
        (level, Complex, Complex)
        (level, Module)
+       (level, Module, Module)
+       (level, Module, Complex)
+       (level, Complex, Module)
      Headline
        computes the level of a complex with respect to another complex, or the ring by default
      Usage
