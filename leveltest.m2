@@ -125,6 +125,7 @@ time level(X,complex(R^1), MaxLevelAttempts => 4) -- more than 125 secs
 
 X = freeResolution(R^1/ideal(x,y^2))
 G = complex(R^1)
+time level(X)
 rX = resolution X;
 rG = resolution G;	
 n = 0;
@@ -137,6 +138,44 @@ f = (minimize f.target).cache.minimizingMap * f
 g = f*g
 n = n+1;
 level(X)
+
+
+--more testing wrt G
+uninstallPackage "Levels"
+restart
+path = append(path,"~/Documents/GitHub/levels");
+installPackage "Complexes";
+installPackage "Levels"
+R = QQ[x]
+rX = freeResolution(R^1/ideal(x))
+rG = complex(R^1)
+n = 0;
+f = id_(rX);
+g = f;
+--while
+(not isNullHomotopic g)
+f = ghost(rG,f.target);
+f = (minimize f.target).cache.minimizingMap * f
+g = f*g
+n = n+1;
+
+	L := {f};
+for i from min H to max H do (
+	    	K := ker H.dd_i;
+		Q := cover K;
+		-- induced module map Q -> H_i
+		h := inducedMap(H_i,K)*map(K,Q,id_Q);
+		for j from 0 to rank Q-1 do (
+			-- complex map R^1[-i] -> H picking out the jth generator in degree i
+			g := map(H,(complex R^1)[-i],k -> if k==-i then map(H_i,R^1,h*(id_Q)_{j}));
+			L = append(L,map(X,G[-i],(map(X[i],G,homomorphism g,Degree => 0)[-i])));
+		);
+	);
+    	f = fold((a,b) -> a | b,L);
+	canonicalMap(cone(f),X)
+
+
+
 
 
 
