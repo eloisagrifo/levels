@@ -265,7 +265,8 @@ restart
 path = append(path,"~/Documents/GitHub/levels");
 installPackage "Complexes";
 installPackage "Levels"
+check "Levels"
 R = QQ[x,y]
-M = R^1/ideal(x^2,y^2)
-N = R^1/ideal(x,y)
-time level()
+M = complex(R^1/ideal(x^2,y^2))
+N = complex(R^1/ideal(x,y))
+time level(M,N)

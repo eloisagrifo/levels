@@ -212,6 +212,9 @@ doc ///
            R = QQ[x,y]
      	   M = R^1/ideal(x,y)
     	   level(M)
+   Caveat
+       Text
+       	   Over singular rings, level only returns correct answers wrt perfect complexes
    SeeAlso
        ghost
 ///
