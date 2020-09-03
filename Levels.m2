@@ -16,7 +16,8 @@ export {
     "MaxLevelAttempts",
     -- Methods
     "ghost",
-    "level"
+    "level",
+    "isPerfect"
 }
 
 needsPackage "Complexes"
@@ -148,8 +149,7 @@ isPerfect=method();
 isPerfect(Complex) := (F) -> (
     R := ring F;
     m := ideal(vars R);
-    k := R^1/m;
-    k := complex(k);
+    k := complex(R^1/m);
     d := dim(R)+max(F)+1;
     G := resolution(F);
     T := tensor(G,k);

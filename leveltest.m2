@@ -270,3 +270,31 @@ R = QQ[x,y]
 M = complex(R^1/ideal(x^2,y^2))
 N = complex(R^1/ideal(x,y))
 time level(M,N)
+
+
+
+
+--testing isPerfect
+uninstallPackage "Levels"
+restart
+path = append(path,"~/Documents/GitHub/levels");
+installPackage "Complexes";
+installPackage "Levels"
+check "Levels"
+R = QQ[x,y]
+M = complex(R^1/ideal(x^2,y^2))
+isPerfect (complex(M))
+N = complex(R^1/ideal(x,y))
+time level(M,N)
+
+F = N
+isPerfect=method();
+isPerfect(Complex) := (F) -> (
+    R := ring F;
+    m := ideal(vars R);
+    k := complex(R^1/m);
+    d := dim(R)+max(F)+1;
+    G := resolution(F);
+    T := tensor(G,k);
+    HH_d(T)==0   
+)
