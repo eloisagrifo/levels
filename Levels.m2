@@ -28,61 +28,19 @@ needsPackage "Complexes"
 ---------------------------------------------------------------
 ---------------------------------------------------------------
 
+---------------------------------------------------------------
 -- This function creates the R-ghost map associated to the approximation
 ghost = method();
-ghost(Complex) := (F) -> (
-	R := ring F;
-	
-	-- Construct the R-approximation of F
-	Q := complex R^0;
-	for i from min F to max F do Q = Q ++ complex(cover ker F.dd_i)[-i];
-	
-	-- Construct map Q -> F
-	fun := i -> if (i >= min F or i <= max F) then inducedMap(F_i,ker F.dd_i)*map(ker F.dd_i,Q_i,id_(Q_i)) else map(R^0,F_i);
-	
-	-- Take the cone
-	G := cone(map(F,Q,fun));
-	
-	-- Return the map F -> G
-	canonicalMap(G,F)
-)
-ghost(Module) := M -> (
-	ghost(complex M)
-)
 
--*
 ghost(Complex,Complex) := (G,X) -> (
 	R := ring G;
 	
 	H := Hom(G,X);
 	
-	-- This going to be the approximation
-	f := map(X,complex R^0,0);
-	-- Find generators of H: maps f_i: G[n_i] -> X
+	-- Collect the generators of H: maps f_i: G[n_i] -> X
+	L := {};
 	for i from min H to max H do (
-		Q := cover ker H.dd_i;
-		-- induced module map Q -> H_i
-		h := inducedMap(H_i,ker H.dd_i)*map(ker H.dd_i,Q,id_Q);
-		for j from 0 to rank Q-1 do (
-			-- complex map R^1[-i] -> H picking out the jth generator in degree i
-			g := map(H,(complex R^1)[-i],k -> if k==-i then map(H_i,R^1,h*(id_Q)_{j}));
-			f = f | map(X,G[-i],(map(X[i],G,homomorphism g,Degree => 0)[-i]));
-		);
-	);
-	canonicalMap(cone(f),X)
-)
-*-
-ghost(Complex,Complex) := (G,X) -> (
-	R := ring G;
-	
-	H := Hom(G,X);
-	
-	-- This going to be the approximation
-	f := map(X,complex R^0,0);
-	-- Find generators of H: maps f_i: G[n_i] -> X
-	L := {f};
-	for i from min H to max H do (
-	    	K := ker H.dd_i;
+		K := ker H.dd_i;
 		Q := cover K;
 		-- induced module map Q -> H_i
 		h := inducedMap(H_i,K)*map(K,Q,id_Q);
@@ -92,13 +50,14 @@ ghost(Complex,Complex) := (G,X) -> (
 			L = append(L,map(X,G[-i],(map(X[i],G,homomorphism g,Degree => 0)[-i])));
 		);
 	);
-    	f = fold((a,b) -> a | b,L);
+	f := fold((a,b) -> a | b,L);
 	canonicalMap(cone(f),X)
 )
 
--- This function computes the level of G with respect to R
+---------------------------------------------------------------
+-- This function computes the level of X with respect to G
 level = method(TypicalValue => ZZ, Options => {MaxLevelAttempts => 100})
--- Compute level of X wrt G
+
 level(Complex,Complex) := ZZ => opts -> (G,X) -> (
 	-- We need X to be a complex of free/projective modules, so that any map from X is zero iff it is null homotopic
 	rX := resolution X;
@@ -112,56 +71,49 @@ level(Complex,Complex) := ZZ => opts -> (G,X) -> (
 		f = (minimize f.target).cache.minimizingMap * f;
 		g = f*g;
 		n = n+1;
+		print "+1";
 	);
 	n
 )
---compute level wrt R
-level(Complex) := ZZ => opts -> (G) -> (
-	-- We need G to be a complex of free/projective modules, so that any map from G is zero iff it is null homotopic
-	G = resolution G;	
-	n := 0;
-	f := id_G;
-	g := f;
-	-- As long as the composition of the ghost maps g is non-zero, continue
-	while ((not isNullHomotopic g) and (n < opts.MaxLevelAttempts)) do (
-		f = ghost f.target;
-		f = (minimize f.target).cache.minimizingMap * f;
-		g = f*g;
-		n = n+1;
-	);
-	n
+level(Complex) := ZZ => opts -> (X) -> (
+	level(complex((ring X)^1),X, MaxLevelAttempts => opts.MaxLevelAttempts)
 )
 level(Module) := ZZ => opts -> (M) -> (
 	level(complex(M), MaxLevelAttempts => opts.MaxLevelAttempts)
 )
 level(Module,Module) := ZZ => opts -> (M,N) -> (
-    level(complex(M),complex(N), MaxLevelAttempts => opts.MaxLevelAttempts)
-    )
+	level(complex(M),complex(N), MaxLevelAttempts => opts.MaxLevelAttempts)
+)
 level(Module,Complex) := ZZ => opts -> (M,N) -> (
-    level(complex(M),N, MaxLevelAttempts => opts.MaxLevelAttempts)
-    )
+	level(complex(M),N, MaxLevelAttempts => opts.MaxLevelAttempts)
+)
 level(Complex,Module) := ZZ => opts -> (M,N) -> (
-    level(M,complex(N), MaxLevelAttempts => opts.MaxLevelAttempts)
-    )
+	level(M,complex(N), MaxLevelAttempts => opts.MaxLevelAttempts)
+)
 
---detects whether a complex is perfect
-isPerfect=method();
+---------------------------------------------------------------
+-- Detects whether a complex is perfect
+isPerfect = method();
+
 isPerfect(Complex) := (F) -> (
-    --First make the ring and its residue field for the complex M
-    R := ring F;
-    m := ideal(vars R);
-    k := complex(R^1/m);
-    --Define the one homological degree we check is zero
-    d := dim(R)+max(F)+1;
-    --Compute Tor^R_d(M,k)
-    G := resolution(F);
-    T := tensor(G,k);
-    HH_d(T)==0   --If true, then M is perfect; otherwise, M is not perfect over R
+	-- First make the ring and its residue field for the complex M
+	R := ring F;
+	m := ideal(vars R);
+	k := complex(R^1/m);
+	
+	-- Define the one homological degree we check is zero
+	d := dim(R) + max(F) + 1;
+	--Compute Tor^R_d(M,k)
+	G := resolution(F);
+	T := tensor(G,k);
+	
+	-- If true, then M is perfect; otherwise, M is not perfect over R
+	HH_d(T) == 0
 )
 --detects whether a module is perfect
 isPerfect(Module) := (M) -> (
-    isPerfect(complex(M))
-    )
+	isPerfect(complex(M))
+)
 -----------------------------------------------------------
 -----------------------------------------------------------
 -- Documentation
@@ -272,7 +224,6 @@ document{
 -----------------------------------------------------------
 
 
-
 TEST ///
 	R = QQ[x,y,z]
 	assert(level(R^1) == 1)
@@ -316,6 +267,14 @@ TEST ///
 	I = ideal vars R
 	F = freeResolution(R^1/I^2)
 	assert(level F == 4)
+///
+
+TEST ///
+	needsPackage "Complexes"
+	R = QQ[x,y]
+	G = freeResolution(R^1/ideal(x))
+	X = freeResolution(R^1/ideal(x,y^2))
+	assert(level(G,X) == 4)
 ///
 
 end
