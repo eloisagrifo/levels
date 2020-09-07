@@ -61,14 +61,20 @@ level = method(TypicalValue => ZZ, Options => {MaxLevelAttempts => 100})
 level(Complex,Complex) := ZZ => opts -> (G,X) -> (
 	-- We need X to be a complex of free/projective modules, so that any map from X is zero iff it is null homotopic
 	rX := resolution X;
-	rG := resolution G;	
+	rG := resolution G;
 	n := 0;
 	f := id_(rX);
 	g := f;
+	T := rX;
 	-- As long as the composition of the ghost maps g is non-zero, continue
 	while ((not isNullHomotopic g) and (n < opts.MaxLevelAttempts)) do (
-		f = ghost(rG,f.target);
-		f = (minimize f.target).cache.minimizingMap * f;
+		T = f.target;
+		f = ghost(rG,T);
+		-- minimize does not give a free complex back, when the input is not homogeneous
+-- 		For some reason the first does not work
+-- 		if (isHomogeneous T) then f = (minimize T).cache.minimizingMap * f;
+		if (isHomogeneous T) then f = (minimize f.target).cache.minimizingMap * f;
+		
 		g = f*g;
 		n = n+1;
 		print "+1";
