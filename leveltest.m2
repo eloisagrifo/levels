@@ -127,3 +127,34 @@ isPerfect(Complex) := (F) -> (
     T := tensor(G,k);
     HH_d(T)==0   
 )
+
+-- Error for level
+-- Level
+R = ZZ[x,a]
+S = R/ideal(promote(2,R))
+f1 = map(S^1,S^2,matrix{{x*a,a^2}})
+f2 = map(source f1,,matrix{{x*a},{-x^2}})
+F = complex{f1,f2}
+isWellDefined F
+level(F,MaxLevelAttempts => 4)
+-- Level should be <= 3
+
+R = ZZ[x]
+S = R/ideal(promote(2,R))
+f1 = map(S^1,S^2,matrix{{x,1}})
+f2 = map(source f1,,matrix{{x},{-x^2}})
+F = complex{f1,f2}
+isWellDefined F
+level(F,MaxLevelAttempts => 4)
+-- This makes no sense, since F is not exact (or equivalently id_F is not nullhomotopic)
+isExact F
+isNullHomotopic id_F
+
+-- Problem is that resolution does not work as it should:
+R = ZZ[x]
+S = R/ideal(promote(2,R))
+f1 = map(S^1,S^2,matrix{{x,1}})
+f2 = map(source f1,,matrix{{x},{-x^2}})
+F = complex{f1,f2}
+isQuasiIsomorphism(resolutionMap F)
+-- It probably does not work since F is not homogeneous
