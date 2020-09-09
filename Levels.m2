@@ -207,6 +207,64 @@ doc ///
 *-
 
 
+doc ///
+     Key
+       isPerfect
+       (isPerfect, Complex)
+       (isPerfect, Module)
+     Headline
+       determines whether a complex is perfect over the ring it is defined over
+     Usage
+       isPerfect(X)
+       isPerfect(M)
+     Inputs
+        X:Complex
+        M:Module -- M is replaced with the corresponding complex
+     Outputs
+       :a Boolean value
+           true if the complex is perfect over the ring it is defined over and false otherwise
+   Description
+       Example
+           R = QQ[x,y]
+	   needsPackage("Complexes");
+     	   m = ideal(vars R)
+	   k = complex(R^1/m)
+    	   isPerfect(k)
+       Example
+           R = QQ[x,y]
+	   needsPackage("Complexes");
+     	   m = ideal(vars R)
+	   k = complex(R^1/m)[-2]
+    	   isPerfect(k)
+       Example
+           R = QQ[x,y]
+	   needsPackage("Complexes");
+     	   m = ideal(vars R)
+	   k = complex(R^1/m)[2]
+    	   isPerfect(k)    
+       Example
+           R = ZZ/2[x,y]/ideal(x^2,y^2)
+	   needsPackage("Complexes");
+     	   m = ideal(vars R)
+	   k = complex(R^1/m)
+    	   isPerfect(k)
+       Example
+           R = ZZ/2[x,y]/ideal(x^2,y^2)
+	   needsPackage("Complexes");
+     	   m = ideal(vars R)
+	   k = complex(R^1/m)[-2]
+    	   isPerfect(k)
+       Example
+           R = ZZ/2[x,y]/ideal(x^2,y^2)
+	   needsPackage("Complexes");
+     	   m = ideal(vars R)
+	   k = complex(R^1/m)[2]
+    	   isPerfect(k)  	   
+///
+
+
+
+
 document{
 	Key => ghost,
 	Headline => "constructs the ghost map associated to the approximation",
