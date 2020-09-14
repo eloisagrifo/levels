@@ -158,3 +158,22 @@ f2 = map(source f1,,matrix{{x},{-x^2}})
 F = complex{f1,f2}
 isQuasiIsomorphism(resolutionMap F)
 -- It probably does not work since F is not homogeneous
+
+
+
+
+--Testing support varieties
+uninstallPackage "Levels"
+restart
+path = append(path,"~/Documents/GitHub/levels");
+installPackage "Levels"
+R = QQ[x]/ideal(x^2)
+M = R^1/ideal(x)
+time isBuilt(M,R^1)
+
+R = QQ[x,y,z]/ideal"x2,yz"
+M = R^1/ideal(x,y)
+time isBuilt(M,R^1)
+time isBuilt(R^1,M)
+level(R^1,M)
+supportVariety(M)

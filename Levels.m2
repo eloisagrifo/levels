@@ -17,7 +17,9 @@ export {
     -- Methods
     "ghost",
     "level",
-    "isPerfect"
+    "isPerfect",
+    "supportVariety",
+    "isBuilt"
 }
 
 needsPackage "Complexes"
@@ -77,7 +79,7 @@ level(Complex,Complex) := ZZ => opts -> (G,X) -> (
 		
 		g = f*g;
 		n = n+1;
-		print "+1";
+--		print "+1";
 	);
 	n
 )
@@ -120,6 +122,38 @@ isPerfect(Complex) := (F) -> (
 isPerfect(Module) := (M) -> (
 	isPerfect(complex(M))
 )
+
+
+supportVariety = method( TypicalValue => Ideal);
+supportVariety(Module) := M -> (
+    R := ring M;
+    k := R^1/ideal vars R;
+    E := Ext(M,k);
+    S := ring E;
+    radical ann(E)
+    )
+
+
+isBuilt = method( TypicalValue => Boolean)
+isBuilt(Module,Module) := (M,N) -> (
+    
+    R := ring M;
+    R2 := ring N;
+    
+    if not(R === R2) then return "expected modules over the same ring";
+    
+    if not(isSubset(ann M, radical ann N)) then return false;
+    
+    k := R^1/ideal vars R;
+    E1 := Ext(k,M);
+    E2 := Ext(k,N);
+    S := ring E1;
+    T := ring E2;
+    iso := map(T,S,flatten entries vars T);
+    E1 = tensor(T,iso,E1);
+    isSubset(ann E2, radical ann E1)
+    )
+
 -----------------------------------------------------------
 -----------------------------------------------------------
 -- Documentation
