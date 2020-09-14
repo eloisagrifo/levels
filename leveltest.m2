@@ -160,6 +160,9 @@ isQuasiIsomorphism(resolutionMap F)
 -- It probably does not work since F is not homogeneous
 
 
+?level
+
+ann M
 
 
 --Testing support varieties
@@ -171,9 +174,13 @@ R = QQ[x]/ideal(x^2)
 M = R^1/ideal(x)
 time isBuilt(M,R^1)
 
+
 R = QQ[x,y,z]/ideal"x2,yz"
 M = R^1/ideal(x,y)
 time isBuilt(M,R^1)
 time isBuilt(R^1,M)
-level(R^1,M)
+time level(R^1,M) -- returns 5 but should be infinity!
 supportVariety(M)
+N = R^1/ideal(x,y^2,z^2)
+time isBuilt(N,R^1)
+time isBuilt(R^1,N)

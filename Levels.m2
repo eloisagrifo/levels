@@ -124,6 +124,7 @@ isPerfect(Module) := (M) -> (
 )
 
 
+--computes the support variety of a module
 supportVariety = method( TypicalValue => Ideal);
 supportVariety(Module) := M -> (
     R := ring M;
@@ -142,7 +143,7 @@ isBuilt(Module,Module) := (M,N) -> (
     
     if not(R === R2) then return "expected modules over the same ring";
     
-    if not(isSubset(ann M, radical ann N)) then return false;
+    if not(isSubset(ann N, radical ann M)) then return false;
     
     k := R^1/ideal vars R;
     E1 := Ext(k,M);
