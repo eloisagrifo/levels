@@ -221,44 +221,44 @@ doc ///
         X:Complex
         M:Module -- M is replaced with the corresponding complex
      Outputs
-       :a Boolean value
+       :Boolean
            true if the complex is perfect over the ring it is defined over and false otherwise
    Description
        Example
            R = QQ[x,y]
 	   needsPackage("Complexes");
-     	   m = ideal(vars R)
-	   k = complex(R^1/m)
+     	   m = ideal(vars R);
+	   k = complex(R^1/m);
     	   isPerfect(k)
        Example
            R = QQ[x,y]
 	   needsPackage("Complexes");
-     	   m = ideal(vars R)
-	   k = complex(R^1/m)[-2]
+     	   m = ideal(vars R);
+	   k = complex(R^1/m)[-2];
     	   isPerfect(k)
        Example
-           R = QQ[x,y]
+           R = QQ[x,y];
 	   needsPackage("Complexes");
-     	   m = ideal(vars R)
-	   k = complex(R^1/m)[2]
+     	   m = ideal(vars R);
+	   k = complex(R^1/m)[2];
     	   isPerfect(k)    
        Example
-           R = ZZ/2[x,y]/ideal(x^2,y^2)
+           R = ZZ/2[x,y]/ideal(x^2,y^2);
 	   needsPackage("Complexes");
-     	   m = ideal(vars R)
-	   k = complex(R^1/m)
+     	   m = ideal(vars R);
+	   k = complex(R^1/m);
     	   isPerfect(k)
        Example
-           R = ZZ/2[x,y]/ideal(x^2,y^2)
+           R = ZZ/2[x,y]/ideal(x^2,y^2);
 	   needsPackage("Complexes");
-     	   m = ideal(vars R)
-	   k = complex(R^1/m)[-2]
+     	   m = ideal(vars R);
+	   k = complex(R^1/m)[-2];
     	   isPerfect(k)
        Example
-           R = ZZ/2[x,y]/ideal(x^2,y^2)
+           R = ZZ/2[x,y]/ideal(x^2,y^2);
 	   needsPackage("Complexes");
-     	   m = ideal(vars R)
-	   k = complex(R^1/m)[2]
+     	   m = ideal(vars R);
+	   k = complex(R^1/m)[2];
     	   isPerfect(k)  	   
 ///
 
