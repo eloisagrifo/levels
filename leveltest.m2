@@ -57,7 +57,7 @@ time level(R^1,F)
 ---------------------------------------------------------------
 -- Tests for ghost with respect to a perfect complex
 R = QQ[x,y]
-G = freeResolution(R^1/ideal(x))
+G = freeResolution(complex(R^1/ideal(x)), LengthLimit => 10)
 X = freeResolution(R^1/ideal(x,y^2))
 time level(G,X)
 -- Correct answer: 2
@@ -180,7 +180,20 @@ M = R^1/ideal(x,y)
 time isBuilt(M,R^1)
 time isBuilt(R^1,M)
 time level(R^1,M) -- returns 5 but should be infinity!
+time level(M,R^1, MaxLevelAttempts => 20)
 supportVariety(M)
 N = R^1/ideal(x,y^2,z^2)
 time isBuilt(N,R^1)
 time isBuilt(R^1,N)
+
+
+
+--changing freeResolution options
+uninstallPackage "Complexes"
+restart
+installPackage "Complexes"
+viewHelp freeResolution
+
+R = QQ[x,y,z]/ideal"x2,yz"
+M = R^1/ideal(x,y)
+freeResolution(M, LengthLimit => 10)

@@ -14,6 +14,7 @@ newPackage(
 export {
     -- Options 
     "MaxLevelAttempts",
+    "Length",
     -- Methods
     "ghost",
     "level",
@@ -58,7 +59,7 @@ ghost(Complex,Complex) := (G,X) -> (
 
 ---------------------------------------------------------------
 -- This function computes the level of X with respect to G
-level = method(TypicalValue => ZZ, Options => {MaxLevelAttempts => 100})
+level = method(Options => {Length => 10, MaxLevelAttempts => 100})
 
 level(Complex,Complex) := ZZ => opts -> (G,X) -> (
 	-- We need X to be a complex of free/projective modules, so that any map from X is zero iff it is null homotopic
@@ -87,21 +88,26 @@ level(Complex) := ZZ => opts -> (X) -> (
 	level(complex((ring X)^1),X, MaxLevelAttempts => opts.MaxLevelAttempts)
 )
 level(Module) := ZZ => opts -> (M) -> (
-	level(complex(M), MaxLevelAttempts => opts.MaxLevelAttempts)
+    F := freeResolution(M,LengthLimit => opts.Length);
+    level(F, MaxLevelAttempts => opts.MaxLevelAttempts)
 )
 level(Module,Module) := ZZ => opts -> (M,N) -> (
-	level(complex(M),complex(N), MaxLevelAttempts => opts.MaxLevelAttempts)
+    F := freeResolution(M, LengthLimit => opts.Length);
+    G := freeResolution(N, LengthLimit => opts.Length);
+	level(F, G, MaxLevelAttempts => opts.MaxLevelAttempts)
 )
 level(Module,Complex) := ZZ => opts -> (M,N) -> (
-	level(complex(M),N, MaxLevelAttempts => opts.MaxLevelAttempts)
+    F := freeResolution(M, LengthLimit => opts.Length);
+    level(F,N, MaxLevelAttempts => opts.MaxLevelAttempts)
 )
 level(Complex,Module) := ZZ => opts -> (M,N) -> (
-	level(M,complex(N), MaxLevelAttempts => opts.MaxLevelAttempts)
+    G := freeResolution(N, LengthLimit => opts.Length);
+    level(M,G, MaxLevelAttempts => opts.MaxLevelAttempts)
 )
 
 ---------------------------------------------------------------
 -- Detects whether a complex is perfect
-isPerfect = method();
+isPerfect = method( TypicalValue => Boolean );
 
 isPerfect(Complex) := (F) -> (
 	-- First make the ring and its residue field for the complex M
@@ -221,7 +227,8 @@ doc ///
      	   F = complex(R^0)
     	   level(F)
        Example
-           R = QQ[x,y]
+           needsPackage("Complexes");
+	   R = QQ[x,y]
      	   M = R^1/ideal(x,y)
     	   level(M)
    Caveat
