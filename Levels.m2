@@ -63,8 +63,8 @@ level = method(Options => {Length => 10, MaxLevelAttempts => 100})
 
 level(Complex,Complex) := ZZ => opts -> (G,X) -> (
 	-- We need X to be a complex of free/projective modules, so that any map from X is zero iff it is null homotopic
-	rX := resolution X;
-	rG := resolution G;
+	rX := resolution(X, LengthLimit => opts.Length);
+	rG := resolution(G, LengthLimit => opts.Length);
 	n := 0;
 	f := id_(rX);
 	g := f;
