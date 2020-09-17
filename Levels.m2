@@ -25,6 +25,7 @@ export {
 
 needsPackage "Complexes"
 needsPackage "Depth"
+needsPackage "CompleteIntersectionResolutions"
 
 ---------------------------------------------------------------
 ---------------------------------------------------------------
@@ -102,7 +103,7 @@ level(Module,Complex) := ZZ => opts -> (M,N) -> (
     level(F,N, MaxLevelAttempts => opts.MaxLevelAttempts)
 )
 level(Complex,Module) := ZZ => opts -> (M,N) -> (
-    G := freeResolution(N, LengthLimit => opts.MaxLevelAttempts;
+    G := freeResolution(N, LengthLimit => opts.MaxLevelAttempts);
     level(M,G, MaxLevelAttempts => opts.MaxLevelAttempts)
 )
 
@@ -153,32 +154,8 @@ isBuilt(Module,Module) := (M,N) -> (
     if not(isSubset(ann N, radical ann M)) then return false;
     
     k := R^1/ideal vars R;
-    E1 := Ext(k,M);
-    E2 := Ext(k,N);
-    S := ring E1;
-    T := ring E2;
-    iso := map(T,S,flatten entries vars T);
-    E1 = tensor(T,iso,E1);
-    isSubset(ann E2, radical ann E1)
-    )
-
-
-
---auxiliary one
-
-isBuilt = method( TypicalValue => Boolean)
-isBuilt(Module,Module) := (M,N) -> (
-    
-    R := ring M;
-    R2 := ring N;
-    
-    if not(R === R2) then return "expected modules over the same ring";
-    
-    if not(isSubset(ann N, radical ann M)) then return false;
-    
-    k := R^1/ideal vars R;
-    E1 := Ext(k,M);
-    E2 := Ext(k,N);
+    E1 := ExtModule(M);
+    E2 := ExtModule(N);
     S := ring E1;
     T := ring E2;
     iso := map(T,S,flatten entries vars T);
