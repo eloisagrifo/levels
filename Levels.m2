@@ -20,10 +20,12 @@ export {
     "level",
     "isPerfect",
     "supportVariety",
-    "isBuilt"
+    "isBuilt",
+    "nonProxySmall"
 }
 
 needsPackage "Complexes"
+needsPackage "Depth"
 
 ---------------------------------------------------------------
 ---------------------------------------------------------------
@@ -160,6 +162,62 @@ isBuilt(Module,Module) := (M,N) -> (
     E1 = tensor(T,iso,E1);
     isSubset(ann E2, radical ann E1)
     )
+
+
+--under construction
+
+--not exported, auxiliary function to build non-proxy small modules
+findgs = method(TypicalValue => Ideal)
+findgs(RingElement) := Ideal => f -> (
+    Q := ring f;
+    R := Q/ideal(f);
+    m := ideal vars R;
+    ideal append({f},lift(inhomogeneousSystemOfParameters(m,R),Q)))
+findgs(List) := Ideal => L -> (
+    Q := ring L_0;
+    R := Q/ideal(L);
+    m := ideal vars R;
+    ideal append(L,lift(inhomogeneousSystemOfParameters(m,R),Q)))
+
+--not exported, auxiliary function to build non-proxy small modules
+makemap = method()
+makemap(Ideal,Ideal) := Matrix => (I,J) -> (
+    Q := ring I;
+    k := coefficientRing Q;
+    m := ideal vars Q;
+    A := inducedMap(J/(m*J),I/(m*I));
+    matrix apply(entries A, i -> apply(i,j -> lift(j,k)))
+    )
+
+nonProxySmall = method(TypicalValue => List)
+nonProxySmall(Ideal) := List => I -> (
+    listf := flatten entries gens I;
+    Q := ring I;
+    f := first listf;
+    newgs := findgs(f);
+    L := {makemap(I,newgs)};
+    G := {newgs};
+    kers := intersect(apply(L,ker));
+    g := f;
+    while kers != 0 do (
+	g = sum(apply(pack(2,mingle(apply(first entries transpose gens kers, o -> promote(o,Q)),listf)),product));
+	newgs = findgs(g);
+	L = append(L,makemap(I,newgs));
+	G = append(G,newgs);
+	kers = intersect(apply(L,ker))
+	);
+    M := Q^1/I ** Q/I;
+    N := Q^1/I ** Q/I;
+    w := select(1,G, o -> (N = (Q^1/o)**(Q/I); isBuilt(M,N)));
+    if w == {} then (return "none found") else w_0
+    )  
+
+
+
+
+
+
+
 
 -----------------------------------------------------------
 -----------------------------------------------------------

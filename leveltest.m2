@@ -197,3 +197,13 @@ viewHelp freeResolution
 R = QQ[x,y,z]/ideal"x2,yz"
 M = R^1/ideal(x,y)
 freeResolution(M, LengthLimit => 10)
+
+
+--testing nonProxySmall
+uninstallPackage "Levels"
+restart
+path = append(path,"~/Documents/GitHub/levels");
+installPackage "Levels"
+Q = QQ[x,y,z]
+I = ideal(x^2-y^2, x^2-z^2, x*y, y*z, x*z)
+time nonProxySmall I
