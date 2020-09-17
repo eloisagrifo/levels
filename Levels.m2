@@ -14,7 +14,6 @@ newPackage(
 export {
     -- Options 
     "MaxLevelAttempts",
-    "Length",
     -- Methods
     "ghost",
     "level",
@@ -61,12 +60,12 @@ ghost(Complex,Complex) := (G,X) -> (
 
 ---------------------------------------------------------------
 -- This function computes the level of X with respect to G
-level = method(Options => {Length => 10, MaxLevelAttempts => 100})
+level = method(Options => {MaxLevelAttempts => 10})
 
 level(Complex,Complex) := ZZ => opts -> (G,X) -> (
 	-- We need X to be a complex of free/projective modules, so that any map from X is zero iff it is null homotopic
-	rX := resolution(X, LengthLimit => opts.Length);
-	rG := resolution(G, LengthLimit => opts.Length);
+	rX := resolution(X, LengthLimit => opts.MaxLevelAttempts);
+	rG := resolution(G, LengthLimit => opts.MaxLevelAttempts);
 	n := 0;
 	f := id_(rX);
 	g := f;
@@ -90,20 +89,20 @@ level(Complex) := ZZ => opts -> (X) -> (
 	level(complex((ring X)^1),X, MaxLevelAttempts => opts.MaxLevelAttempts)
 )
 level(Module) := ZZ => opts -> (M) -> (
-    F := freeResolution(M,LengthLimit => opts.Length);
+    F := freeResolution(M,LengthLimit => opts.MaxLevelAttempts);
     level(F, MaxLevelAttempts => opts.MaxLevelAttempts)
 )
 level(Module,Module) := ZZ => opts -> (M,N) -> (
-    F := freeResolution(M, LengthLimit => opts.Length);
-    G := freeResolution(N, LengthLimit => opts.Length);
+    F := freeResolution(M, LengthLimit => opts.MaxLevelAttempts);
+    G := freeResolution(N, LengthLimit => opts.MaxLevelAttempts);
 	level(F, G, MaxLevelAttempts => opts.MaxLevelAttempts)
 )
 level(Module,Complex) := ZZ => opts -> (M,N) -> (
-    F := freeResolution(M, LengthLimit => opts.Length);
+    F := freeResolution(M, LengthLimit => opts.MaxLevelAttempts);
     level(F,N, MaxLevelAttempts => opts.MaxLevelAttempts)
 )
 level(Complex,Module) := ZZ => opts -> (M,N) -> (
-    G := freeResolution(N, LengthLimit => opts.Length);
+    G := freeResolution(N, LengthLimit => opts.MaxLevelAttempts;
     level(M,G, MaxLevelAttempts => opts.MaxLevelAttempts)
 )
 
@@ -142,6 +141,30 @@ supportVariety(Module) := M -> (
     radical ann(E)
     )
 
+
+isBuilt = method( TypicalValue => Boolean)
+isBuilt(Module,Module) := (M,N) -> (
+    
+    R := ring M;
+    R2 := ring N;
+    
+    if not(R === R2) then return "expected modules over the same ring";
+    
+    if not(isSubset(ann N, radical ann M)) then return false;
+    
+    k := R^1/ideal vars R;
+    E1 := Ext(k,M);
+    E2 := Ext(k,N);
+    S := ring E1;
+    T := ring E2;
+    iso := map(T,S,flatten entries vars T);
+    E1 = tensor(T,iso,E1);
+    isSubset(ann E2, radical ann E1)
+    )
+
+
+
+--auxiliary one
 
 isBuilt = method( TypicalValue => Boolean)
 isBuilt(Module,Module) := (M,N) -> (
