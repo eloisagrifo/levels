@@ -35,6 +35,7 @@ needsPackage "CompleteIntersectionResolutions"
 
 ---------------------------------------------------------------
 -- This function creates the G-ghost map associated to the approximation
+---------------------------------------------------------------
 ghost = method();
 
 ghost(Complex,Complex) := (G,X) -> (
@@ -80,6 +81,7 @@ ghost(Complex) := (X) -> (
 
 ---------------------------------------------------------------
 -- This function computes the level of X with respect to G
+---------------------------------------------------------------
 level = method(Options => {MaxLevelAttempts => 10});
 
 level(Complex,Complex) := ZZ => opts -> (G,X) -> (
@@ -141,6 +143,7 @@ level(Complex,Module) := ZZ => opts -> (M,N) -> (
 
 ---------------------------------------------------------------
 -- Detects whether a complex is perfect
+---------------------------------------------------------------
 isPerfect = method( TypicalValue => Boolean );
 
 isPerfect(Complex) := (F) -> (
@@ -158,13 +161,14 @@ isPerfect(Complex) := (F) -> (
     -- If true, then M is perfect; otherwise, M is not perfect over R
     HH_d(T) == 0
 )
---detects whether a module is perfect
+-- Detects whether a module is perfect
 isPerfect(Module) := (M) -> (
     isPerfect(complex(M))
 )
 
-
---computes the support variety of a module
+---------------------------------------------------------------
+-- Computes the support variety of a module
+---------------------------------------------------------------
 supportVariety = method( TypicalValue => Ideal);
 supportVariety(Module) := M -> (
     R := ring M;
@@ -172,9 +176,11 @@ supportVariety(Module) := M -> (
     E := Ext(M,k);
     S := ring E;
     radical ann(E)
-    )
+)
 
-
+---------------------------------------------------------------
+-- 
+---------------------------------------------------------------
 isBuilt = method( TypicalValue => Boolean)
 isBuilt(Module,Module) := (M,N) -> (
     
@@ -193,23 +199,25 @@ isBuilt(Module,Module) := (M,N) -> (
     iso := map(T,S,flatten entries vars T);
     E1 = tensor(T,iso,E1);
     isSubset(ann E2, radical ann E1)
-    )
+)
 
-
---under construction
-
+---------------------------------------------------------------
+-- under construction
+---------------------------------------------------------------
 --not exported, auxiliary function to build non-proxy small modules
 findgs = method(TypicalValue => Ideal)
 findgs(RingElement) := Ideal => f -> (
     Q := ring f;
     R := Q/ideal(f);
     m := ideal vars R;
-    ideal append({f},lift(inhomogeneousSystemOfParameters(m,R),Q)))
+    ideal append({f},lift(inhomogeneousSystemOfParameters(m,R),Q))
+)
 findgs(List) := Ideal => L -> (
     Q := ring L_0;
     R := Q/ideal(L);
     m := ideal vars R;
-    ideal append(L,lift(inhomogeneousSystemOfParameters(m,R),Q)))
+    ideal append(L,lift(inhomogeneousSystemOfParameters(m,R),Q))
+)
 
 --not exported, auxiliary function to build non-proxy small modules
 makemap = method()
@@ -219,7 +227,7 @@ makemap(Ideal,Ideal) := Matrix => (I,J) -> (
     m := ideal vars Q;
     A := inducedMap(J/(m*J),I/(m*I));
     matrix apply(entries A, i -> apply(i,j -> lift(j,k)))
-    )
+)
 
 nonProxySmall = method(TypicalValue => List)
 nonProxySmall(Ideal) := List => I -> (
@@ -242,7 +250,7 @@ nonProxySmall(Ideal) := List => I -> (
     N := Q^1/I ** Q/I;
     w := select(1,G, o -> (N = (Q^1/o)**(Q/I); isBuilt(M,N)));
     if w == {} then (return "none found") else w_0
-    )  
+)  
 
 
 
@@ -259,155 +267,183 @@ nonProxySmall(Ideal) := List => I -> (
 
 beginDocumentation()
 
-document{ 
-    Key => Levels,
-    Headline => "A package to compute the level with respect to the ring of a complex.",
+doc ///
+    Key
+        Levels
+    Headline
+        A package to work with finite building of complexes
+    Description
+        Text
+            A full subcategory of the derived category ${\rm D}(R)$ is {\em thick} if it is triangualted and closed under direct summands. For every complex $X$ there exists a smallest thick subcategory containing $X$. An inductive construction of the thick subcategory is given by [BvdB03]. A complex $X$ {\em finitely builds} a complex $Y$, if $Y$ lies in the smallest thick subcategory containing $X$. The method {\tt isBuild} checks whether $X$ finitely builds $Y$, and the method {\tt level} computes the number of steps required $X$ to build $Y$.
+            
+            The ring, viewed as a complex in degree 0, finitely builds every finitely generated module of finite projective dimension, and the level is the projective dimension.
     
-    PARA {
-        "This package provides a method that constructs the ghost map associated to the approximation, and using the converse ghost lemma for the ring, this gives a method to compute the level with respect to the ring. For modules the level with respect to the ring is the same as the projective dimension."},
-    
-    UL {
-        {"J. Daniel Christensen.", EM " Ideals in triangulated categories: phantoms, ghosts and skeleta. Adv. Math., 136(2):284–339, 1998."}
-    },
-    
-    SUBSECTION "Contributors", "The following people have generously contributed code or worked on our code at various Macaulay2 workshops.",
-}
+            {\bf References}
+            
+            [BvdB03] Alexey I. Bondal and Michel van den Bergh, {\em Generators and representability of functors in commutative and noncommutative geometry}, Mosc. Math. J. {\bf 3} (2003), no.~1, 1–36, 258. \break
+            [Chr98] J. Daniel Christensen. {\em Ideals in triangulated categories: phantoms, ghosts and skeleta}, Adv. Math., 136(2):284–339, 1998.
+///
 
--*
-document{
-    Key => level,
-    Headline => "compute the level with respect to the ring",
-    Usage => "level F",
-    Inputs => {
-        {TT "F",", a complex"}
-    },
-    Outputs => {
-        {"an integer, the level of ", TT "F"}
-    }
-}
-*-
-
-
--- doc ///
---      Key
---        level
---        (level, Complex)
---        (level, Complex, Complex)
---        (level, Module)
---        (level, Module, Module)
---        (level, Module, Complex)
---        (level, Complex, Module)
---      Headline
---        computes the level of a complex with respect to another complex, or the ring by default
---      Usage
---        level(X)
---        level(X,G)
---        level(M)
---      Inputs
---         X:Complex
---         G:Complex -- if no G is provided, G is assumed to be the underlying ring
---         M:Module -- M is replaced with the corresponding complex
---      Outputs
---        :ZZ
---            the level of X with respect to G
---    Description
---        Example
---            R = QQ[x,y,z]
---        needsPackage("Complexes");
---             F = complex(R^0)
---            level(F)
---        Example
---            needsPackage("Complexes");
---        R = QQ[x,y]
---             M = R^1/ideal(x,y)
---            level(M)
---    Caveat
---        Text
---               Over singular rings, level only returns correct answers wrt perfect complexes
---    SeeAlso
---        ghost
--- ///
-
--*
-       Example
-           R = QQ[x,y]
-       needsPackage("Complexes");
-       F = complex(R^0)
-       G = freeResolution(R^1/ideal(x))
-       X = freeResolution(R^1/ideal(x,y^2))
-       level(X,G)   
-*-
+doc ///
+    Key
+        level
+        (level, Complex)
+        (level, Complex, Complex)
+        (level, Module)
+        (level, Module, Module)
+        (level, Module, Complex)
+        (level, Complex, Module)
+    Headline
+        computes the level of a complex with respect to another complex, or the ring by default
+    Usage
+        level(X)
+        level(G,X)
+        level(M)
+    Inputs
+        X:Complex
+        G:Complex -- if no G is provided, G is assumed to be the underlying ring
+        M:Module -- M is replaced with the corresponding complex
+    Outputs
+        :ZZ
+            the level of X with respect to G
+    Description
+        Text
+            Computes the level of the second complex with respect to the first complex. 
+            
+            When the input is one complex, then it computes the level with respect to the ring. 
+        Example
+            needsPackage "Complexes";
+            R = QQ[x,y,z]
+            F = complex(R^0)
+            level(F)
+        
+        Text
+            When the input is one module, then it computes the level of the module viewed as a complex concentrated in degree 0. The output is precisely the projective dimension $+1$. 
+        
+        Example
+            R = QQ[x,y]
+            M = R^1/ideal(x,y)
+            level(M)
+        
+        Text
+            When the input consists of two complexes (or modules or one complex and one module), then it computes the level of the first complex with respect to the second. 
+        
+        Example
+            R = QQ[x]
+            M = R^1/ideal(x)
+            N = R^1/ideal(x^4)
+            level(M,N)
+    Caveat
+        Over singular rings, level only returns correct answers wrt perfect complexes
+            
+    SeeAlso
+        ghost
+///
 
 
--- doc ///
---      Key
---        isPerfect
---        (isPerfect, Complex)
---        (isPerfect, Module)
---      Headline
---        determines whether a complex is perfect over the ring it is defined over
---      Usage
---        isPerfect(X)
---        isPerfect(M)
---      Inputs
---         X:Complex
---         M:Module -- M is replaced with the corresponding complex
---      Outputs
---        :Boolean
---            true if the complex is perfect over the ring it is defined over and false otherwise
---    Description
---        Example
---            R = QQ[x,y]
---        needsPackage("Complexes");
---             m = ideal(vars R);
---        k = complex(R^1/m);
---            isPerfect(k)
---        Example
---            R = QQ[x,y]
---        needsPackage("Complexes");
---             m = ideal(vars R);
---        k = complex(R^1/m)[-2];
---            isPerfect(k)
---        Example
---            R = QQ[x,y];
---        needsPackage("Complexes");
---             m = ideal(vars R);
---        k = complex(R^1/m)[2];
---            isPerfect(k)    
---        Example
---            R = ZZ/2[x,y]/ideal(x^2,y^2);
---        needsPackage("Complexes");
---             m = ideal(vars R);
---        k = complex(R^1/m);
---            isPerfect(k)
---        Example
---            R = ZZ/2[x,y]/ideal(x^2,y^2);
---        needsPackage("Complexes");
---             m = ideal(vars R);
---        k = complex(R^1/m)[-2];
---            isPerfect(k)
---        Example
---            R = ZZ/2[x,y]/ideal(x^2,y^2);
---        needsPackage("Complexes");
---             m = ideal(vars R);
---        k = complex(R^1/m)[2];
---            isPerfect(k)         
--- ///
+doc ///
+    Key
+        isPerfect
+        (isPerfect, Complex)
+        (isPerfect, Module)
+    Headline
+        determines whether a complex is perfect over the ring it is defined over
+    Usage
+        isPerfect(X)
+        isPerfect(M)
+    Inputs
+        X:Complex
+        M:Module -- M is replaced with the corresponding complex
+    Outputs
+        :Boolean
+            true if the complex is perfect over the ring it is defined over and false otherwise
+    Description
+        Example
+            needsPackage "Complexes";
+            R = QQ[x,y]
+            m = ideal(vars R);
+            k = complex(R^1/m);
+            isPerfect(k)
+        Example
+            needsPackage "Complexes";
+            R = QQ[x,y]
+            m = ideal(vars R);
+            k = complex(R^1/m)[-2];
+            isPerfect(k)
+        Example
+            needsPackage "Complexes";
+            R = QQ[x,y];
+            m = ideal(vars R);
+            k = complex(R^1/m)[2];
+            isPerfect(k)    
+        Example
+            R = ZZ/2[x,y]/ideal(x^2,y^2);
+            needsPackage("Complexes");
+            m = ideal(vars R);
+            k = complex(R^1/m);
+            isPerfect(k)
+        Example
+            needsPackage "Complexes";
+            R = ZZ/2[x,y]/ideal(x^2,y^2);
+            m = ideal(vars R);
+            k = complex(R^1/m)[-2];
+            isPerfect(k)
+        Example
+            needsPackage "Complexes";
+            R = ZZ/2[x,y]/ideal(x^2,y^2);
+            m = ideal(vars R);
+            k = complex(R^1/m)[2];
+            isPerfect(k)         
+///
 
-
-
-
-document{
-    Key => ghost,
-    Headline => "constructs the ghost map associated to the approximation",
-    Usage => "ghost F",
-    Inputs => {
-        {TT "F",", a chain complex"}
-    },
-    Outputs => {
-        {"a ChainComplexMap, a ghost map starting at ", TT "F"}
-    }
-}
+doc ///
+    Key
+        ghost
+        (ghost, Complex, Complex)
+        (ghost, Complex)
+        (ghost, Complex, ZZ)
+    Headline
+        constructs a ghost map
+    Usage
+        ghost X
+        ghost(G,X)
+        ghost(X,n)
+    Inputs
+        X:Complex
+        G:Complex
+        n:ZZ
+    Outputs
+        :ComplexMap
+            a ghost map starting at {\tt F}
+    Description
+        Text
+            This method computes a map starting at $X$, that is ghost with respect to a complex of free modules $G$. That is any pre-composition with a suspension of $G$ is zero in the derived category.
+        Example
+            needsPackage "Complexes";
+            R = QQ[x]
+            X = complex(R^1/ideal(x^2))
+            G = freeResolution(R^1/ideal(x))
+            f = ghost(G,X)
+            (prune HH Hom(G,f)) == 0
+        Text
+            For one complex $X$, this method returns a ghost map starting at $X$ with respect to the ring.
+        Example
+            needsPackage "Complexes";
+            R = QQ[x,y]
+            X = complex(R^1/ideal(x*y))
+            f = ghost(X)
+            (prune HH f) == 0
+        Text
+            For a complex $X$ and an integer $n$, the method considers only the part of the complex $X$ of degree less or equal to $n$. That is it computes a map starting at $X$, that is zero in homology of degree less or equal $n$.
+        Example
+            needsPackage "Complexes";
+            R = QQ[x,y]
+            X = complex(R^1/ideal(x*y)) ++ complex(R^1/ideal(x*y))[-2]
+            f = ghost(X,1)
+            HH_0 f == 0
+            HH_1 f == 0
+            HH_2 f == 0
+///
 
 -----------------------------------------------------------
 -----------------------------------------------------------

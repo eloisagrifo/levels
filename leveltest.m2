@@ -228,3 +228,10 @@ Y = complex(R^1) ++ X[2]
 time level(Y,MaxLevelAttempts => 10)
 time level(complex R^1,Y,MaxLevelAttempts => 10)
 
+-- Some example
+R = QQ[x,y]
+       needsPackage("Complexes");
+       F = complex(R^0)
+       G = freeResolution(R^1/ideal(x))
+       X = freeResolution(R^1/ideal(x,y^2))
+       level(X,G)   
