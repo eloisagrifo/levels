@@ -207,3 +207,24 @@ installPackage "Levels"
 Q = QQ[x,y,z]
 I = ideal(x^2-y^2, x^2-z^2, x*y, y*z, x*z)
 time nonProxySmall I
+
+-- Compare different methods for level wrt R^1
+uninstallPackage "Levels"
+restart
+loadPackage "Complexes"
+installPackage "Levels"
+
+R = QQ[x,y,z]
+X = R^1/ideal(x^2,y^2,z^2)
+f1 = map(R^1,R^2,matrix{{x,y^2}})
+f2 = map(source f1,X,matrix{{x},{1}})
+F = complex{f1,f2}
+
+R = QQ[x]/ideal(x^2)
+X = complex(R^4/ideal(x))
+time level(X,MaxLevelAttempts => 5)
+time level(R^1,X,MaxLevelAttempts => 5)
+Y = complex(R^1) ++ X[2]
+time level(Y,MaxLevelAttempts => 10)
+time level(complex R^1,Y,MaxLevelAttempts => 10)
+
