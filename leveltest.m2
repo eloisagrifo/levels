@@ -230,8 +230,24 @@ time level(complex R^1,Y,MaxLevelAttempts => 10)
 
 -- Some example
 R = QQ[x,y]
-       needsPackage("Complexes");
-       F = complex(R^0)
-       G = freeResolution(R^1/ideal(x))
-       X = freeResolution(R^1/ideal(x,y^2))
-       level(X,G)   
+needsPackage("Complexes");
+F = complex(R^0)
+G = freeResolution(R^1/ideal(x))
+X = freeResolution(R^1/ideal(x,y^2))
+level(G,X)  
+
+-- Truncations of the resolution and how they affect the result of level
+R = QQ[x]/ideal(x^2)
+X = complex(R^1/ideal(x))
+resolution(X,LengthLimit => 5)
+resolution(X[3],LengthLimit => 5) == resolution(X[3]++X[-3],LengthLimit => 5)
+
+-- Examples that explore this weakness
+R = QQ[x,y]
+X = complex(R^1/ideal(x,y))
+level(X,X++X[-2],MaxLevelAttempts => 3)
+-- This should be 1, but returns 3
+level(X,X++X[-4],MaxLevelAttempts => 6)
+
+
+
