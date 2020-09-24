@@ -201,6 +201,51 @@ isBuilt(Module,Module) := (M,N) -> (
     isSubset(ann E2, radical ann E1)
 )
 
+
+
+---------------------------------------------------------------
+-- complete ext over non-ci
+---------------------------------------------------------------
+
+--same as Ext
+extKoszul = method()
+extKoszul(Module) := Module => M -> (
+    cacheModule := M;
+    cacheKey := (Ext,M);
+    if cacheModule.cache#?cacheKey then return cacheModule.cache#cacheKey;
+    B := ring M;
+    if not isCommutative B
+    then error "'Ext' not implemented yet for noncommutative rings.";
+    if not isHomogeneous B
+    then error "'Ext' received modules over an inhomogeneous ring";
+    if not isHomogeneous M
+    then error "received an inhomogeneous module";
+    if M == 0 then return cacheModule.cache#cacheKey = B^0;
+    p := presentation B;
+    A := ring p;
+    I := ideal mingens ideal p;
+    n := numgens A;
+    c := numgens I;
+    f := apply(c, i -> I_i);
+    pM := lift(presentation M,A);
+    N := coker(vars B);
+    pN := lift(presentation N,A);
+    M' := cokernel ( pM | p ** id_(target pM) );
+    N' := cokernel ( pN | p ** id_(target pN) );
+    assert isHomogeneous M';
+    C := complete resolution M';
+    X := getSymbol "X";
+    K := coefficientRing A;
+    S := K(monoid [X_1 .. X_c, toSequence A.generatorSymbols,
+	    Degrees => {
+		apply(0 .. c-1, i -> prepend(-2, - degree f_i)),
+		apply(0 .. n-1, j -> prepend( 0,   degree A_j))
+		}]);
+    )
+
+
+
+
 ---------------------------------------------------------------
 -- under construction
 ---------------------------------------------------------------
