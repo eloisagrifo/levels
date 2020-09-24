@@ -1,9 +1,10 @@
 -- Installing the Package
 uninstallPackage "Levels"
 restart
-loadPackage "Complexes"
+path=append(path,"~/Documents/Github/levels");
 installPackage "Levels"
 check "Levels"
+loadPackage "Complexes"
 
 ---------------------------------------------------------------
 -- Tests for level wrt R^1
@@ -175,6 +176,27 @@ M = R^1/ideal(x)
 time isBuilt(M,R^1)
 
 
+R = QQ[x,y,z]/ideal"x2,y2,z2"
+k = R^1/ideal(x,y,z)
+M = R^1/ideal"x,y"
+time isBuilt(k,R^1)
+time isBuilt(R^1,k)
+time isBuilt(M,R^1)
+time isBuilt(R^1,M)
+
+supportVariety(M)
+N = R^1/ideal(x,y^2,z^2)
+time isBuilt(N,R^1)
+time isBuilt(R^1,N)
+
+E1 = extKoszul(M)
+E2 = extKoszul(R^1)
+S = ring E1
+T = ring E2
+M
+
+
+--testing isBuilt
 R = QQ[x,y,z]/ideal"x2,yz"
 M = R^1/ideal(x,y)
 time isBuilt(M,R^1)
@@ -241,7 +263,6 @@ R = QQ[x]/ideal(x^2)
 X = complex(R^1/ideal(x))
 resolution(X,LengthLimit => 5)
 resolution(X[3],LengthLimit => 5) == resolution(X[3]++X[-3],LengthLimit => 5)
-
 -- Examples that explore this weakness
 R = QQ[x,y]
 X = complex(R^1/ideal(x,y))

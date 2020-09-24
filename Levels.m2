@@ -191,13 +191,12 @@ isBuilt(Module,Module) := (M,N) -> (
     
     if not(isSubset(ann N, radical ann M)) then return false;
     
-    k := R^1/ideal vars R;
-    E1 := ExtModule(M);
-    E2 := ExtModule(N);
-    S := ring E1;
-    T := ring E2;
-    iso := map(T,S,flatten entries vars T);
-    E1 = tensor(T,iso,E1);
+    E1 := extKoszul(M);
+    E2 := extKoszul(N);
+    S1 := ring E1;
+    S2 := ring E2;
+    iso := map(S2,S1, gens S2);
+    E1 = tensor(S2,iso,E1);
     isSubset(ann E2, radical ann E1)
 )
 
@@ -210,9 +209,6 @@ isBuilt(Module,Module) := (M,N) -> (
 --same code as Ext, but in such a way that it will run for our purposes
 extKoszul = method()
 extKoszul(Module) := Module => M -> (
-    cacheModule := M;
-    cacheKey := (Ext,M);
-    if cacheModule.cache#?cacheKey then return cacheModule.cache#cacheKey;
     B := ring M;
     if not isCommutative B
     then error "'Ext' not implemented yet for noncommutative rings.";
@@ -220,7 +216,7 @@ extKoszul(Module) := Module => M -> (
     then error "'Ext' received modules over an inhomogeneous ring";
     if not isHomogeneous M
     then error "received an inhomogeneous module";
-    if M == 0 then return cacheModule.cache#cacheKey = B^0;
+    if M == 0 then return B^0;
     p := presentation B;
     A := ring p;
     I := ideal mingens ideal p;
@@ -296,14 +292,7 @@ extKoszul(Module) := Module => M -> (
             );
        -- now compute the total Ext as a single homology module
        tot := minimalPresentation homology(DeltaBar,DeltaBar);
-       cacheModule.cache#cacheKey = tot;
-       Y := local Y;
-           T := K[Y_0..Y_(c-1), Degrees => toList(c:{2})];
-           v := map(T,
-                ring tot, 
-                vars T | matrix{toList ((numgens R):0_T)}, 
-                DegreeMap => i -> {-first i} );
-           prune coker v presentation tot)
+       tot)
 
 
 
