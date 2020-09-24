@@ -111,7 +111,7 @@ level(Complex,Module) := ZZ => opts -> (M,N) -> (
 -- Detects whether a complex is perfect
 isPerfect = method( TypicalValue => Boolean );
 
-isPerfect(Complex) := (F) -> (
+isPerfect(Complex) := F -> (
 	-- First make the ring and its residue field for the complex M
 	R := ring F;
 	m := ideal(vars R);
@@ -127,11 +127,9 @@ isPerfect(Complex) := (F) -> (
 	HH_d(T) == 0
 )
 --detects whether a module is perfect
-isPerfect(Module) := (M) -> (
-	isPerfect(complex(M))
-)
-
-
+isPerfect(Module) := M -> (
+    isPerfect complex M
+    )
 --computes the support variety of a module
 supportVariety = method( TypicalValue => Ideal);
 supportVariety(Module) := M -> (
@@ -139,13 +137,50 @@ supportVariety(Module) := M -> (
     k := R^1/ideal vars R;
     E := Ext(M,k);
     S := ring E;
-    radical ann(E)
+    radical ann E
     )
+---exactly the same as the Ext code, except it also runs for non-cis
+extKoszul = method()
+extKoszul(Module) := Module => M -> (
+    cacheModule := M;
+    cacheKey := (Ext,M);
+    if cacheModule.cache#?cacheKey then return cacheModule.cache#cacheKey;
+    B := ring M;
+    if not isCommutative B
+    then error "'Ext' not implemented yet for noncommutative rings.";
+    if not isHomogeneous B
+    then error "'Ext' received modules over an inhomogeneous ring";
+    if not isHomogeneous M
+    then error "received an inhomogeneous module";
+    if M == 0 then return cacheModule.cache#cacheKey = B^0;
+    p := presentation B;
+    A := ring p;
+    I := ideal mingens ideal p;
+    n := numgens A;
+    c := numgens I;
+    f := apply(c, i -> I_i);
+    pM := lift(presentation M,A);
+    N := coker(vars B);
+    pN := lift(presentation N,A);
+    M' := cokernel ( pM | p ** id_(target pM) );
+    N' := cokernel ( pN | p ** id_(target pN) );
+    assert isHomogeneous M';
+    C := complete resolution M';
+    X := getSymbol "X";
+    K := coefficientRing A;
+    S := K(monoid [X_1 .. X_c, toSequence A.generatorSymbols,
+	    Degrees => {
+		apply(0 .. c-1, i -> prepend(-2, - degree f_i)),
+		apply(0 .. n-1, j -> prepend( 0,   degree A_j))
+		}]);
+    )
+
+
 
 
 isBuilt = method( TypicalValue => Boolean)
 isBuilt(Module,Module) := (M,N) -> (
-    
+        
     R := ring M;
     R2 := ring N;
     
@@ -154,8 +189,8 @@ isBuilt(Module,Module) := (M,N) -> (
     if not(isSubset(ann N, radical ann M)) then return false;
     
     k := R^1/ideal vars R;
-    E1 := ExtModule(M);
-    E2 := ExtModule(N);
+    E1 := extKoszul(M);
+    E2 := extKoszul(N);
     S := ring E1;
     T := ring E2;
     iso := map(T,S,flatten entries vars T);
