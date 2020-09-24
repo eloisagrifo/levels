@@ -20,12 +20,12 @@ export {
     "isPerfect",
     "supportVariety",
     "isBuilt",
-    "nonProxySmall"
+    "nonProxySmall",
+    "extKoszul"
 }
 
 needsPackage "Complexes"
 needsPackage "Depth"
-needsPackage "CompleteIntersectionResolutions"
 
 ---------------------------------------------------------------
 ---------------------------------------------------------------
@@ -207,7 +207,7 @@ isBuilt(Module,Module) := (M,N) -> (
 -- complete ext over non-ci
 ---------------------------------------------------------------
 
---same as Ext
+--same code as Ext, but in such a way that it will run for our purposes
 extKoszul = method()
 extKoszul(Module) := Module => M -> (
     cacheModule := M;
@@ -235,13 +235,75 @@ extKoszul(Module) := Module => M -> (
     assert isHomogeneous M';
     C := complete resolution M';
     X := getSymbol "X";
+    x := getSymbol "x";
     K := coefficientRing A;
-    S := K(monoid [X_1 .. X_c, toSequence A.generatorSymbols,
+    d := numgens A;
+    S := K(monoid [X_1 .. X_c, toSequence gens A,
 	    Degrees => {
 		apply(0 .. c-1, i -> prepend(-2, - degree f_i)),
 		apply(0 .. n-1, j -> prepend( 0,   degree A_j))
 		}]);
-    )
+    -- make a monoid whose monomials can be used as indices
+       Rmon := monoid [X_1 .. X_c,Degrees=>{c:{2}}];
+       -- make group ring, so 'basis' can enumerate the monomials
+       R := K Rmon;
+       -- make a hash table to store the blocks of the matrix
+       blks := new MutableHashTable;
+       blks#(exponents 1_Rmon) = C.dd;
+       scan(0 .. c-1, i -> 
+            blks#(exponents Rmon_i) = nullhomotopy (- f_i*id_C));
+       -- a helper function to list the factorizations of a monomial
+       factorizations := (gamma) -> (
+         -- Input: gamma is the list of exponents for a monomial
+         -- Return a list of pairs of lists of exponents showing the
+         -- possible factorizations of gamma.
+         if gamma === {} then { ({}, {}) }
+         else (
+           i := gamma#-1;
+           splice apply(factorizations drop(gamma,-1), 
+             (alpha,beta) -> apply (0..i, 
+                  j -> (append(alpha,j), append(beta,i-j))))));
+       scan(4 .. length C + 1, 
+         d -> if even d then (
+           scan( flatten \ exponents \ leadMonomial \ first entries basis(d,R), 
+             gamma -> (
+               s := - sum(factorizations gamma,
+                 (alpha,beta) -> (
+                   if blks#?alpha and blks#?beta
+                   then blks#alpha * blks#beta
+                   else 0));
+               -- compute and save the nonzero nullhomotopies
+               if s != 0 then blks#gamma = nullhomotopy s;
+               ))));
+       -- make a free module whose basis elements have the right degrees
+       spots := C -> sort select(keys C, i -> class i === ZZ);
+       Cstar := S^(apply(spots C,
+           i -> toSequence apply(degrees C_i, d -> prepend(i,d))));
+       -- assemble the matrix from its blocks.
+       -- We omit the sign (-1)^(n+1) which would ordinarily be used,
+       -- which does not affect the homology.
+       toS := map(S,A,apply(toList(c .. c+n-1), i -> S_i),
+         DegreeMap => prepend_0);
+       Delta := map(Cstar, Cstar, 
+         transpose sum(keys blks, m -> S_m * toS sum blks#m),
+         Degree => { -1, degreeLength A:0 });
+       DeltaBar := Delta ** (toS ** N');
+       if debugLevel > 10 then (
+            assert isHomogeneous DeltaBar;
+            assert(DeltaBar * DeltaBar == 0);
+            stderr << describe ring DeltaBar <<endl;
+            stderr << toExternalString DeltaBar << endl;
+            );
+       -- now compute the total Ext as a single homology module
+       tot := minimalPresentation homology(DeltaBar,DeltaBar);
+       cacheModule.cache#cacheKey = tot;
+       Y := local Y;
+           T := K[Y_0..Y_(c-1), Degrees => toList(c:{2})];
+           v := map(T,
+                ring tot, 
+                vars T | matrix{toList ((numgens R):0_T)}, 
+                DegreeMap => i -> {-first i} );
+           prune coker v presentation tot)
 
 
 
@@ -551,7 +613,7 @@ TEST ///
     R = QQ[x,y]
     G = freeResolution(R^1/ideal(x))
     X = freeResolution(R^1/ideal(x,y^2))
-    assert(level(G,X) == 4)
+    assert(level(G,X) == 2)
 ///
 
 end
