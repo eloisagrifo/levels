@@ -14,6 +14,7 @@ newPackage(
 export {
     -- Options 
     "MaxLevelAttempts",
+    "LengthLimitGenerator",
     -- Methods
     "ghost",
     "level",
@@ -39,7 +40,10 @@ needsPackage "Depth"
 ghost = method();
 
 ghost(Complex,Complex) := (G,X) -> (
+    -- Check that G and X are complexes over the same ring
     R := ring G;
+    R2 := ring X;
+    if not(R === R2) then error "Expected complexes over the same ring.";
     
     H := Hom(G,X);
     
@@ -80,14 +84,48 @@ ghost(Complex) := (X) -> (
 )
 
 ---------------------------------------------------------------
+-- This function creates the R-coghost map associated to the approximation
+---------------------------------------------------------------
+coghost = method();
+
+coghost(Complex,Complex) := (G,X) -> (
+    -- Check that G and X are complexes over the same ring
+    R := ring G;
+    R2 := ring X;
+    if not(R === R2) then error "Expected complexes over the same ring.";
+    
+    H := Hom(X,G);
+    
+    -- Collect the generators of H: maps f_i: X -> G[n_i]
+    L := {};
+    for i from min H to max H do (
+        K := ker H.dd_i;
+        Q := cover K;
+        -- induced module map Q -> H_i
+        h := inducedMap(H_i,K)*map(K,Q,id_Q);
+        for j from 0 to rank Q-1 do (
+            -- complex map R^1[-i] -> H picking out the jth generator in degree i
+            g := map(H,(complex R^1)[-i],k -> if k==i then map(H_i,R^1,h*(id_Q)_{j}));
+            L = append(L,map(G[i],X,homomorphism g,Degree => 0));
+        );
+    );
+    f := fold((a,b) -> a | b,L);
+    canonicalMap(X[-1],cone(f))
+)
+
+---------------------------------------------------------------
 -- This function computes the level of X with respect to G
 ---------------------------------------------------------------
-level = method(Options => {MaxLevelAttempts => 10});
+level = method(Options => {MaxLevelAttempts => 10,LengthLimit => 10,LengthLimitGenerator => 5,Strategy => 0});
 
 level(Complex,Complex) := ZZ => opts -> (G,X) -> (
+    -- Check that G and X are complexes over the same ring
+    R1 := ring G;
+    R2 := ring X;
+    if not(R1 === R2) then error "Expected complexes over the same ring.";
     -- We need X to be a complex of free/projective modules, so that any map from X is zero iff it is null homotopic
-    rX := resolution(X, LengthLimit => opts.MaxLevelAttempts);
-    rG := resolution(G, LengthLimit => opts.MaxLevelAttempts);
+    rX := resolution(X, LengthLimit => opts.LengthLimit);
+    rG := resolution(G, LengthLimit => opts.LengthLimitGenerator);
     n := 0;
     f := id_(rX);
     g := f;
@@ -124,21 +162,21 @@ level(Complex) := ZZ => opts -> (X) -> (
     n
 )
 level(Module) := ZZ => opts -> (M) -> (
-    F := freeResolution(M,LengthLimit => opts.MaxLevelAttempts);
-    level(F, MaxLevelAttempts => opts.MaxLevelAttempts)
+    X := freeResolution(M,LengthLimit => opts.MaxLevelAttempts);
+    level(X, MaxLevelAttempts => opts.MaxLevelAttempts)
 )
 level(Module,Module) := ZZ => opts -> (M,N) -> (
-    F := freeResolution(M, LengthLimit => opts.MaxLevelAttempts);
-    G := freeResolution(N, LengthLimit => opts.MaxLevelAttempts);
-    level(F, G, MaxLevelAttempts => opts.MaxLevelAttempts)
+    G := freeResolution(M, LengthLimit => opts.LengthLimitGenerator);
+    X := freeResolution(N, LengthLimit => opts.LengthLimit);
+    level(G,X, MaxLevelAttempts => opts.MaxLevelAttempts, LengthLimit => opts.LengthLimit, LengthLimitGenerator => opts.LengthLimitGenerator, Strategy => opts.Strategy)
 )
-level(Module,Complex) := ZZ => opts -> (M,N) -> (
-    F := freeResolution(M, LengthLimit => opts.MaxLevelAttempts);
-    level(F,N, MaxLevelAttempts => opts.MaxLevelAttempts)
+level(Module,Complex) := ZZ => opts -> (M,X) -> (
+    G := freeResolution(M, LengthLimit => opts.LengthLimitGenerator);
+    level(G,X, MaxLevelAttempts => opts.MaxLevelAttempts, LengthLimit => opts.LengthLimit, LengthLimitGenerator => opts.LengthLimitGenerator, Strategy => opts.Strategy)
 )
-level(Complex,Module) := ZZ => opts -> (M,N) -> (
-    G := freeResolution(N, LengthLimit => opts.MaxLevelAttempts);
-    level(M,G, MaxLevelAttempts => opts.MaxLevelAttempts)
+level(Complex,Module) := ZZ => opts -> (G,N) -> (
+    X := freeResolution(N, LengthLimit => opts.LengthLimit);
+    level(G,X, MaxLevelAttempts => opts.MaxLevelAttempts, LengthLimit => opts.LengthLimit, LengthLimitGenerator => opts.LengthLimitGenerator, Strategy => opts.Strategy)
 )
 
 ---------------------------------------------------------------
@@ -235,10 +273,10 @@ extKoszul(Module) := Module => M -> (
     K := coefficientRing A;
     d := numgens A;
     S := K(monoid [X_1 .. X_c, toSequence gens A,
-	    Degrees => {
-		apply(0 .. c-1, i -> prepend(-2, - degree f_i)),
-		apply(0 .. n-1, j -> prepend( 0,   degree A_j))
-		}]);
+        Degrees => {
+        apply(0 .. c-1, i -> prepend(-2, - degree f_i)),
+        apply(0 .. n-1, j -> prepend( 0,   degree A_j))
+        }]);
     -- make a monoid whose monomials can be used as indices
        Rmon := monoid [X_1 .. X_c,Degrees=>{c:{2}}];
        -- make group ring, so 'basis' can enumerate the monomials
@@ -510,10 +548,10 @@ doc ///
         n:ZZ
     Outputs
         :ComplexMap
-            a ghost map starting at {\tt F}
+            a ghost map starting at {\tt X}
     Description
         Text
-            This method computes a map starting at $X$, that is ghost with respect to a complex of free modules $G$. That is any pre-composition with a suspension of $G$ is zero in the derived category.
+            This method computes a map starting at $X$, that is ghost with respect to $G$. That is any pre-composition with a suspension of $G$ is zero in the derived category.
         Example
             needsPackage "Complexes";
             R = QQ[x]
@@ -539,6 +577,8 @@ doc ///
             HH_0 f == 0
             HH_1 f == 0
             HH_2 f == 0
+    Caveat
+        This method only returns the correct answer if $G$ is a complex of free modules. 
 ///
 
 -----------------------------------------------------------
