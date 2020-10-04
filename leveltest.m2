@@ -272,3 +272,17 @@ level(X,X++X[-4],MaxLevelAttempts => 6)
 
 
 
+uninstallPackage "Levels"
+restart
+path=append(path,"~/Documents/Github/levels");
+installPackage "Levels"
+Q = QQ[x,y]
+I = ideal"xy,x2"
+nonProxySmall(I)
+R = Q/I
+nonProxySmall(R)
+M1 = R^1/ideal"y"
+M2 = R^1/ideal"x+y"
+isBuilt(R^1,M1)
+isBuilt(R^1,M2)
+isBuilt(R^1,R^1/ideal"x,y")

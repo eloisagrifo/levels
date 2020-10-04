@@ -363,8 +363,8 @@ makemap(Ideal,Ideal) := Matrix => (I,J) -> (
     matrix apply(entries A, i -> apply(i,j -> lift(j,k)))
 )
 
-nonProxySmall = method(TypicalValue => List)
-nonProxySmall(Ideal) := List => I -> (
+nonProxySmall = method()
+nonProxySmall(Ideal) := Ideal => I -> (
     listf := flatten entries gens I;
     Q := ring I;
     f := first listf;
@@ -382,9 +382,14 @@ nonProxySmall(Ideal) := List => I -> (
     );
     M := Q^1/I ** Q/I;
     N := Q^1/I ** Q/I;
-    w := select(1,G, o -> (N = (Q^1/o)**(Q/I); isBuilt(M,N)));
-    if w == {} then (return "none found") else w_0
-)  
+    w := select(1,G, o -> (N = (Q^1/o)**(Q/I); not isBuilt(M,N)));
+    if w == {} then (return "none found") else return w_0
+)
+nonProxySmall(Ring) := Module => R -> (
+    I := ideal R;
+    Q := ambient R;
+    (Q^1/nonProxySmall(I)) ** R
+    )
 
 
 
