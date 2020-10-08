@@ -13,11 +13,13 @@ R = QQ[x,y,z]
 F = complex R^0
 time level F
 time level(R^1,F)
+time level(F,Strategy => "coghost")
 -- Correct answer: 0
 
 F = complex R^2
 time level F
 time level(R^1,F)
+time level(F,Strategy => "coghost")
 -- Correct answer: 1
 
 R = QQ[x,y,z]/ideal(x*y*z)
@@ -25,6 +27,7 @@ G = complex R^2
 F = G ++ G[1] ++ G[-1]
 time level F
 time level(R^1,F)
+time level(F,Strategy => "coghost")
 -- Correct answer: 1
 
 R = QQ[x,y,z]
@@ -32,6 +35,7 @@ I = ideal vars R
 F = freeResolution(R^1/I)
 time level F
 time level(R^1,F)
+time level(F,Strategy => "coghost")
 -- Correct answer: 4
 
 R = QQ[x,y,z]
@@ -39,6 +43,7 @@ I = ideal vars R
 F = freeResolution(R^1/I)[-3]
 time level F
 time level(R^1,F)
+time level(F,Strategy => "coghost")
 -- Correct answer: 4
 
 R = QQ[x,y,z]
@@ -46,6 +51,7 @@ I = ideal vars R
 F = freeResolution(R^1/I^2)
 time level F
 time level(R^1,F)
+time level(F,Strategy => "coghost")
 -- Correct answer: 4
 
 R = QQ[x]
@@ -53,14 +59,16 @@ I = ideal vars R
 F = complex(R^1/I)
 time level F
 time level(R^1,F)
+time level(F,Strategy => "coghost")
 -- Correct answer: 2
 
 ---------------------------------------------------------------
 -- Tests for ghost with respect to a perfect complex
 R = QQ[x,y]
-G = freeResolution(complex(R^1/ideal(x)), LengthLimit => 10)
+G = freeResolution(R^1/ideal(x), LengthLimit => 10)
 X = freeResolution(R^1/ideal(x,y^2))
 time level(G,X)
+time level(G,X,Strategy => "coghost")
 -- Correct answer: 2
 
 R = QQ[x_1 .. x_6]

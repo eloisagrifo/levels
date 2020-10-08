@@ -17,6 +17,7 @@ export {
     "LengthLimitGenerator",
     -- Methods
     "ghost",
+    "coghost",
     "level",
     "isPerfect",
     "supportVariety",
@@ -109,14 +110,18 @@ coghost(Complex,Complex) := (G,X) -> (
             L = append(L,map(G[i],X,homomorphism g,Degree => 0));
         );
     );
-    f := fold((a,b) -> a | b,L);
-    canonicalMap(X[-1],cone(f))
+    f := fold((a,b) -> a || b,L);
+    canonicalMap(X[-1],cone(f))[1]
+)
+
+coghost(Complex) := (X) -> (
+    coghost(complex((ring X)^1),X)
 )
 
 ---------------------------------------------------------------
 -- This function computes the level of X with respect to G
 ---------------------------------------------------------------
-level = method(Options => {MaxLevelAttempts => 10,LengthLimit => 10,LengthLimitGenerator => 5,Strategy => 0});
+level = method(Options => {MaxLevelAttempts => 10,LengthLimit => 10,LengthLimitGenerator => 5,Strategy => "ghost"});
 
 level(Complex,Complex) := ZZ => opts -> (G,X) -> (
     -- Check that G and X are complexes over the same ring
@@ -130,40 +135,57 @@ level(Complex,Complex) := ZZ => opts -> (G,X) -> (
     f := id_(rX);
     g := f;
     homogeneous := isHomogeneous X;
-    -- As long as the composition of the ghost maps g is non-zero, continue
-    while ((not isNullHomotopic g) and (n < opts.MaxLevelAttempts)) do (
-        rX = f.target;
-        f = ghost(rG,rX);
-        -- minimize if possible
-        if homogeneous then f = (minimize f.target).cache.minimizingMap * f;
-        
-        g = f*g;
-        n = n+1;
+    if (opts.Strategy == "coghost") then ( -- Coghost maps
+        -- As long as the composition of the ghost maps g is non-zero, continue
+        while ((not isNullHomotopic g) and (n < opts.MaxLevelAttempts)) do (
+            rX = f.source;
+            f = coghost(rG,rX);
+            
+            g = g*f;
+            n = n+1;
+        );
+    ) else ( -- Ghost maps
+        -- As long as the composition of the ghost maps g is non-zero, continue
+        while ((not isNullHomotopic g) and (n < opts.MaxLevelAttempts)) do (
+            rX = f.target;
+            f = ghost(rG,rX);
+            -- minimize if possible
+            if homogeneous then f = (minimize f.target).cache.minimizingMap * f;
+            
+            g = f*g;
+            n = n+1;
+        );
     );
     n
 )
 level(Complex) := ZZ => opts -> (X) -> (
-    rX := resolution(X, LengthLimit => opts.MaxLevelAttempts);
+    rX := resolution(X, LengthLimit => opts.LengthLimit);
     n := 0;
     f := id_(rX);
     g := f;
     h := max HH X;
     homogeneous := isHomogeneous X;
-    -- As long as the composition of the ghost maps g is non-zero, continue
-    while ((not isNullHomotopic g) and (n < opts.MaxLevelAttempts)) do (
-        rX = f.target;
-        f = ghost(rX,h+n);
-        -- minimize if possible
-        if homogeneous then f = (minimize f.target).cache.minimizingMap * f;
-        
-        g = f*g;
-        n = n+1;
+    -- The strategy decides whether ghost or coghost maps are used
+    if (opts.Strategy == "coghost") then ( -- Coghost maps
+        -- For coghost maps there is no `better' way for level wrt to R
+        n = level((ring X)^1,rX, MaxLevelAttempts => opts.MaxLevelAttempts, LengthLimit => opts.LengthLimit, Strategy => opts.Strategy);
+    ) else ( -- Ghost maps
+        -- As long as the composition of the ghost maps g is non-zero, continue
+        while ((not isNullHomotopic g) and (n < opts.MaxLevelAttempts)) do (
+            rX = f.target;
+            f = ghost(rX,h+n);
+            -- minimize if possible
+            if homogeneous then f = (minimize f.target).cache.minimizingMap * f;
+            
+            g = f*g;
+            n = n+1;
+        );
     );
     n
 )
 level(Module) := ZZ => opts -> (M) -> (
-    X := freeResolution(M,LengthLimit => opts.MaxLevelAttempts);
-    level(X, MaxLevelAttempts => opts.MaxLevelAttempts)
+    X := freeResolution(M,LengthLimit => opts.LengthLimit);
+    level(X, MaxLevelAttempts => opts.MaxLevelAttempts, LengthLimit => opts.LengthLimit, Strategy => opts.Strategy)
 )
 level(Module,Module) := ZZ => opts -> (M,N) -> (
     G := freeResolution(M, LengthLimit => opts.LengthLimitGenerator);
@@ -425,6 +447,95 @@ doc ///
 
 doc ///
     Key
+        ghost
+        (ghost, Complex, Complex)
+        (ghost, Complex)
+        (ghost, Complex, ZZ)
+    Headline
+        constructs a ghost map
+    Usage
+        ghost X
+        ghost(G,X)
+        ghost(X,n)
+    Inputs
+        X:Complex
+        G:Complex
+        n:ZZ
+    Outputs
+        :ComplexMap
+            a ghost map with source $X$
+    Description
+        Text
+            This method computes a map with source $X$, that is ghost with respect to $G$. That is any pre-composition with a suspension of $G$ is zero in the derived category.
+        Example
+            needsPackage "Complexes";
+            R = QQ[x]
+            X = complex(R^1/ideal(x^2))
+            G = freeResolution(R^1/ideal(x))
+            f = ghost(G,X)
+            (prune HH Hom(G,f)) == 0
+        Text
+            For one complex $X$, this method returns a ghost map with source $X$ with respect to the ring.
+        Example
+            needsPackage "Complexes";
+            R = QQ[x,y]
+            X = complex(R^1/ideal(x*y))
+            f = ghost(X)
+            (prune HH f) == 0
+        Text
+            For a complex $X$ and an integer $n$, the method considers only the part of the complex $X$ of degree less or equal to $n$. That is it computes a map starting at $X$, that is zero in homology of degree less or equal $n$.
+        Example
+            needsPackage "Complexes";
+            R = QQ[x,y]
+            X = complex(R^1/ideal(x*y)) ++ complex(R^1/ideal(x*y))[-2]
+            f = ghost(X,1)
+            HH_0 f == 0
+            HH_1 f == 0
+            HH_2 f == 0
+    Caveat
+        This method only works if $G$ is a complex of free modules. 
+///
+
+doc ///
+    Key
+        coghost
+        (coghost, Complex, Complex)
+        (coghost, Complex)
+    Headline
+        constructs a coghost map
+    Usage
+        coghost X
+        coghost(G,X)
+    Inputs
+        X:Complex
+        G:Complex
+    Outputs
+        :ComplexMap
+            a coghost map with target $X$
+    Description
+        Text
+            This method computes a map with target $X$, that is coghost with respect to $G$. That is any post-composition with a suspension of $G$ is zero in the derived category.
+        Example
+            needsPackage "Complexes";
+            R = QQ[x]
+            X = freeResolution(R^1/ideal(x^2))
+            G = complex(R^1/ideal(x))
+            f = coghost(G,X)
+            (prune HH Hom(f,G)) == 0
+        Text
+            For one complex $X$, this method returns a coghost map with target $X$ with respect to the ring.
+        Example
+            needsPackage "Complexes";
+            R = QQ[x,y]
+            X = freeResolution(R^1/ideal(x*y))
+            f = coghost(X)
+            (prune HH Hom(f,complex R^1)) == 0
+    Caveat
+        This method only works if $X$ is a complex of free modules. 
+///
+
+doc ///
+    Key
         level
         (level, Complex)
         (level, Complex, Complex)
@@ -479,6 +590,86 @@ doc ///
         ghost
 ///
 
+doc ///
+    Key
+        MaxLevelAttempts
+        [level,MaxLevelAttempts]
+    Headline
+        stop when this number is reached
+    Usage
+        level(..., MaxLevelAttempts => 10)
+    Description
+        Text
+            When computing the level of a complex, a sequence of ghost maps is constructed. The level is the smallest number for which the composition of the ghost maps is zero. This option stops the computation after the given number of steps. 
+        Example
+            R = QQ[x]/(x^2)
+            M = R^1/ideal(x)
+            level(M,MaxLevelAttempts => 4)
+            level(M,MaxLevelAttempts => 5)
+    SeeAlso
+        level
+///
+
+doc ///
+    Key
+        [level,LengthLimit]
+    Headline
+        compute the resolution of the complex of at most this length
+    Usage
+        level(..., LengthLimit => 10)
+    Description
+        Text
+            To compute the level of a complex, the level of its free resolution is computed. 
+        Example
+            R = QQ[x]/(x^2)
+            M = R^1/ideal(x)
+            level(M,LengthLimit => 4)
+            level(M,LengthLimit => 5)
+    SeeAlso
+        level
+///
+
+doc ///
+    Key
+        LengthLimitGenerator
+        [level,LengthLimitGenerator]
+    Headline
+        compute the resolution of the generator of at most this length
+    Usage
+        level(G,X, LengthLimitGenerator => 5)
+    Description
+        Text
+            To compute the level with respect to a $G$, the level with respect to a free resolution of $G$ is computed. 
+        Example
+            needsPackage "Complexes";
+            R = QQ[x]/(x^2)
+            G = R^1/ideal(x)
+            f1 = map(R^1,R^1,matrix{{x}})
+            f2 = map(source f1,,matrix{{x}})
+            f3 = map(source f2,,matrix{{x}})
+            X = complex{f1,f2,f3}
+            level(G,X,LengthLimitGenerator => 2)
+            level(G,X,LengthLimitGenerator => 3)
+    SeeAlso
+        level
+///
+
+doc ///
+    Key
+        [level,Strategy]
+    Headline
+        choose the strategy used to compute level
+    Usage
+        level(G,X, LengthLimitGenerator => "ghost")
+        level(G,X, LengthLimitGenerator => "coghost")
+    Description
+        Text
+            The default value is "ghost".
+    SeeAlso
+        coghost
+        ghost
+        level
+///
 
 doc ///
     Key
@@ -533,57 +724,6 @@ doc ///
             m = ideal(vars R);
             k = complex(R^1/m)[2];
             isPerfect(k)         
-///
-
-doc ///
-    Key
-        ghost
-        (ghost, Complex, Complex)
-        (ghost, Complex)
-        (ghost, Complex, ZZ)
-    Headline
-        constructs a ghost map
-    Usage
-        ghost X
-        ghost(G,X)
-        ghost(X,n)
-    Inputs
-        X:Complex
-        G:Complex
-        n:ZZ
-    Outputs
-        :ComplexMap
-            a ghost map starting at {\tt X}
-    Description
-        Text
-            This method computes a map starting at $X$, that is ghost with respect to $G$. That is any pre-composition with a suspension of $G$ is zero in the derived category.
-        Example
-            needsPackage "Complexes";
-            R = QQ[x]
-            X = complex(R^1/ideal(x^2))
-            G = freeResolution(R^1/ideal(x))
-            f = ghost(G,X)
-            (prune HH Hom(G,f)) == 0
-        Text
-            For one complex $X$, this method returns a ghost map starting at $X$ with respect to the ring.
-        Example
-            needsPackage "Complexes";
-            R = QQ[x,y]
-            X = complex(R^1/ideal(x*y))
-            f = ghost(X)
-            (prune HH f) == 0
-        Text
-            For a complex $X$ and an integer $n$, the method considers only the part of the complex $X$ of degree less or equal to $n$. That is it computes a map starting at $X$, that is zero in homology of degree less or equal $n$.
-        Example
-            needsPackage "Complexes";
-            R = QQ[x,y]
-            X = complex(R^1/ideal(x*y)) ++ complex(R^1/ideal(x*y))[-2]
-            f = ghost(X,1)
-            HH_0 f == 0
-            HH_1 f == 0
-            HH_2 f == 0
-    Caveat
-        This method only returns the correct answer if $G$ is a complex of free modules. 
 ///
 
 -----------------------------------------------------------
