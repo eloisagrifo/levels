@@ -1,5 +1,5 @@
 newPackage(
-    "Levels",
+    "ThickSubcategories",
     Version => "1.0", 
     Date => "August 27, 2020",
     Authors => {
@@ -430,12 +430,12 @@ beginDocumentation()
 
 doc ///
     Key
-        Levels
+        ThickSubcategories
     Headline
-        A package to work with finite building of complexes
+        A package for computations related to finite building of complexes
     Description
         Text
-            A full subcategory of the derived category ${\rm D}(R)$ is {\em thick} if it is triangualted and closed under direct summands. For every complex $X$ there exists a smallest thick subcategory containing $X$. An inductive construction of the thick subcategory is given by [BvdB03]. A complex $X$ {\em finitely builds} a complex $Y$, if $Y$ lies in the smallest thick subcategory containing $X$. The method {\tt isBuild} checks whether $X$ finitely builds $Y$, and the method {\tt level} computes the number of steps required $X$ to build $Y$.
+            A full subcategory of the derived category ${\rm D}(R)$ is {\em thick} if it is triangulated and closed under direct summands. For every complex $X$ there exists a smallest thick subcategory containing $X$. An inductive construction of the thick subcategory is given by [BvdB03]. A complex $X$ {\em finitely builds} a complex $Y$, if $Y$ lies in the smallest thick subcategory containing $X$. The method {\tt isBuilt} checks whether $X$ finitely builds $Y$, and the method {\tt level} computes the number of steps required $X$ to build $Y$.
             
             The ring, viewed as a complex in degree 0, finitely builds every finitely generated module of finite projective dimension, and the level is the projective dimension.
     
