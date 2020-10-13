@@ -294,3 +294,37 @@ M2 = R^1/ideal"x+y"
 isBuilt(R^1,M1)
 isBuilt(R^1,M2)
 isBuilt(R^1,R^1/ideal"x,y")
+
+
+-- Installing the Package
+uninstallPackage "ThickSubcategories"
+restart
+installPackage "ThickSubcategories"
+needsPackage "Complexes"
+
+-----------------------------------------------------------
+-- Test if it makes sense to cut off the lower degree at the end of the while loop
+
+R = QQ[x,y]
+X = freeResolution coker vars R
+time level X
+-- 0.220509
+-- 0.183668
+
+R = QQ[x,y]/ideal(x^2)
+X = freeResolution(R^1/ideal(y^2))
+time level X
+-- 0.133126
+-- 0.127081
+
+R = QQ[x,y,z]/ideal(x*y,y*z,z*x,x+y+z)
+X = freeResolution(coker vars R,LengthLimit => 3)
+time level X
+-- 1.73377
+-- 0.949323
+
+R = QQ[x,y,z]/ideal(x*y,y*z,z*x,x+y+z)
+X = freeResolution(coker vars R,LengthLimit => 4)
+time level X
+-- 21.9887
+-- 6.78384

@@ -164,11 +164,12 @@ level(Complex) := ZZ => opts -> (X) -> (
     f := id_(rX);
     g := f;
     h := max HH X;
+    i := min X;
     homogeneous := isHomogeneous X;
     -- The strategy decides whether ghost or coghost maps are used
     if (opts.Strategy == "coghost") then ( -- Coghost maps
         -- For coghost maps there is no `better' way for level wrt to R
-        n = level((ring X)^1,rX, MaxLevelAttempts => opts.MaxLevelAttempts, LengthLimit => opts.LengthLimit, Strategy => opts.Strategy);
+        n = level((ring X)^1,rX, MaxLevelAttempts => opts.MaxLevelAttempts, LengthLimit => opts.LengthLimit, LengthLimitGenerator => 0, Strategy => opts.Strategy);
     ) else ( -- Ghost maps
         -- As long as the composition of the ghost maps g is non-zero, continue
         while ((not isNullHomotopic g) and (n < opts.MaxLevelAttempts)) do (
@@ -177,7 +178,8 @@ level(Complex) := ZZ => opts -> (X) -> (
             -- minimize if possible
             if homogeneous then f = (minimize f.target).cache.minimizingMap * f;
             
-            g = f*g;
+            -- The target always has zeros in degrees <= i+n, so those degrees do not play a role when testing if the map is null-homotopic
+            g = f*g*inducedMap(g.source,naiveTruncation(g.source,i+n+1,));
             n = n+1;
         );
     );
