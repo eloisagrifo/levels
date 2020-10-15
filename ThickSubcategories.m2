@@ -287,10 +287,10 @@ extKoszul(Module) := Module => M -> (
     c := numgens I;
     f := apply(c, i -> I_i);
     pM := lift(presentation M,A);
-    N := coker(vars B);
-    pN := lift(presentation N,A);
+--    N := coker(vars B);
+--    pN := lift(presentation N,A);
     M' := cokernel ( pM | p ** id_(target pM) );
-    N' := cokernel ( pN | p ** id_(target pN) );
+--    N' := cokernel ( pN | p ** id_(target pN) );
     assert isHomogeneous M';
     C := complete resolution M';
     X := getSymbol "X";
@@ -346,7 +346,7 @@ extKoszul(Module) := Module => M -> (
        Delta := map(Cstar, Cstar, 
          transpose sum(keys blks, m -> S_m * toS sum blks#m),
          Degree => { -1, degreeLength A:0 });
-       DeltaBar := Delta ** (toS ** N');
+       DeltaBar := Delta ** (toS ** M');
        if debugLevel > 10 then (
             assert isHomogeneous DeltaBar;
             assert(DeltaBar * DeltaBar == 0);
@@ -356,7 +356,6 @@ extKoszul(Module) := Module => M -> (
        -- now compute the total Ext as a single homology module
        tot := minimalPresentation homology(DeltaBar,DeltaBar);
        tot)
-
 
 
 
