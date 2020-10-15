@@ -23,7 +23,8 @@ export {
     "supportVariety",
     "isBuilt",
     "nonProxySmall",
-    "extKoszul"
+    "extKoszul",
+    "findgs"
 }
 
 needsPackage "Complexes"
@@ -233,7 +234,7 @@ supportVariety = method( TypicalValue => Ideal);
 supportVariety(Module) := M -> (
     R := ring M;
     k := R^1/ideal vars R;
-    E := Ext(M,k);
+    E := extKoszul(M);
     S := ring E;
     radical ann(E)
 )
