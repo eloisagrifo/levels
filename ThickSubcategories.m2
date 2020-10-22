@@ -271,21 +271,27 @@ isBuilt(Module,Module) := (M,N) -> (
 
 --same code as Ext, but in such a way that it will run for our purposes
 extKoszul = method()
-extKoszul(Module) := Module => M -> (
+extKoszul(Complex,Complex) := Module => (M,N) -> (
     B := ring M;
+    if B != ring(N) then error "need modules over the same ring";
     if not isCommutative B
     then error "'Ext' not implemented yet for noncommutative rings.";
     if not isHomogeneous B
     then error "'Ext' received modules over an inhomogeneous ring";
-    if not isHomogeneous M
+    if ((not isHomogeneous M) or (not isHomogeneous N))
     then error "received an inhomogeneous module";
+    
+    --this needs to be fixed later -- answer over the wrong ring
     if M == 0 then return B^0;
+    if N == 0 then return B^0;
+    
     p := presentation B;
     A := ring p;
     I := ideal mingens ideal p;
     n := numgens A;
     c := numgens I;
     f := apply(c, i -> I_i);
+    
     pM := lift(presentation M,A);
 --    N := coker(vars B);
 --    pN := lift(presentation N,A);
