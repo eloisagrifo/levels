@@ -328,3 +328,34 @@ X = freeResolution(coker vars R,LengthLimit => 4)
 time level X
 -- 21.9887
 -- 6.78384
+
+
+----------------------------------------------------------------------------
+-- Test for restriction of scalars
+
+uninstallPackage "ThickSubcategories"
+restart
+installPackage "ThickSubcategories"
+needsPackage "Complexes"
+
+R = QQ[x,y,z]/ideal(x^3,x*y)
+M = R^1/ideal(y)
+N = R^1/ideal(x,y)
+f = inducedMap(N,M)
+
+restrict f
+
+p = presentation R
+Q = ring p
+I = trim ideal p
+c = numgens I
+f = apply(c,i->I_i)
+
+pM = lift(presentation M,Q)
+M' = cokernel(pM | p ** id_(target pM) )
+
+
+
+
+
+
