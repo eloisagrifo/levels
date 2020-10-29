@@ -291,15 +291,22 @@ R = Q/I
 nonProxySmall(R)
 M1 = R^1/ideal"y"
 M2 = R^1/ideal"x+y"
+M3 = R^1/ideal"x"
 isBuilt(R^1,M1)
 isBuilt(R^1,M2)
+isBuilt(R^1,M3)
 isBuilt(R^1,R^1/ideal"x,y")
-
+k = R^1/ideal(x,y)
+isBuilt(k,R^1)
+d = depth R + 3
+time level(R^1,k,MaxLevelAttempts => d, LengthLimit => d)
 
 -- Installing the Package
 uninstallPackage "ThickSubcategories"
 restart
+path=append(path,"~/Documents/Github/levels");
 installPackage "ThickSubcategories"
+check "ThickSubcategories"
 needsPackage "Complexes"
 
 -----------------------------------------------------------
