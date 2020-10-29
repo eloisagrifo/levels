@@ -24,7 +24,8 @@ export {
     "isBuilt",
     "nonProxySmall",
     "extKoszul",
-    "findgs"
+    "findgs",
+    "restrict"
 }
 
 needsPackage "Complexes"
@@ -264,6 +265,43 @@ isBuilt(Module,Module) := (M,N) -> (
 )
 
 
+---------------------------------------------------------------
+-- restriction of scalars
+---------------------------------------------------------------
+
+restrict = method()
+
+restrict(Module) := Module => (M) -> (
+    R := ring M;
+    
+    p := presentation R;
+    Q := ring p;
+    I := trim ideal p;
+    c := numgens I;
+    f := apply(c, i -> I_i); -- list of generators of I
+    
+    pM := lift(presentation M,Q);
+    cokernel ( pM | p ** id_(target pM) )
+)
+
+restrict(ModuleMap) := Complex => (f) -> (
+    M := f.source;
+    N := f.target;
+    
+    F := res(M,LengthLimit => 1);
+    F_(-1) = M;
+    F.dd_0 = inducedMap(M,F_0);
+    F = F[-1];
+    
+    G := res(N,LengthLimit => 1);
+    G_(-1) = N;
+    G.dd_0 = inducedMap(N,G_0);
+    G = G[-1];
+    
+    extend(G,F,f)
+    
+    
+)
 
 ---------------------------------------------------------------
 -- complete ext over non-ci
