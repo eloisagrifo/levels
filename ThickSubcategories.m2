@@ -284,23 +284,43 @@ restrict(Module) := Module => (M) -> (
     cokernel ( pM | p ** id_(target pM) )
 )
 
-restrict(ModuleMap) := Complex => (f) -> (
+-- This can be simplified, especially at the end. 
+restrict(ModuleMap) := ModuleMap => (f) -> (
     M := f.source;
     N := f.target;
+    R := ring f;
     
-    F := res(M,LengthLimit => 1);
-    F_(-1) = M;
-    F.dd_0 = inducedMap(M,F_0);
-    F = F[-1];
+    -- R-complexes containing the modules and their presentation
+    F := cone(resolutionMap(complex(M),LengthLimit=>1));
+    G := cone(resolutionMap(complex(N),LengthLimit=>1));
     
-    G := res(N,LengthLimit => 1);
-    G_(-1) = N;
-    G.dd_0 = inducedMap(N,G_0);
-    G = G[-1];
+    -- extend the map to the presentation of the modules
+    g := extend(G,F,f);
     
-    extend(G,F,f)
+    -- lift the ring
+    p := presentation R;
+    Q := ring p;
     
+    -- lift the presenentation
+    pM := lift(F.dd_2,Q);
+    pN := lift(G.dd_2,Q);
     
+    -- add relations of M to the lifted presentation
+    lF := complex({pM | p ** id_(target pM)});
+    
+    -- compose lifted presentation of N with the surjection Q ->> R
+    lG := complex({(inducedMap(cokernel p,p.target) ** id_(target pN)) * pN});
+    
+    -- create lifted/induced complex map g: lF -> lG
+    h := map(lG,lF,hashTable{ 
+        0 => (inducedMap(cokernel p,p.target) ** id_(target pN)) * lift(g_1,Q),
+        1 => (lift(g_2,Q) | map(lG_1,p.source ** (target pM),0))});
+        
+    HH_0 h
+)
+
+restrict(Complex) := Complex => (C) (
+    -- TODO
 )
 
 ---------------------------------------------------------------
