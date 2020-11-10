@@ -40,9 +40,9 @@ needsPackage "Depth"
 ---------------------------------------------------------------
 -- This function creates the G-ghost map associated to the approximation
 ---------------------------------------------------------------
-ghost = method();
+ghost = method( TypicalValue => ComplexMap );
 
-ghost(Complex,Complex) := (G,X) -> (
+ghost(Complex,Complex) := ComplexMap => (G,X) -> (
     -- Check that G and X are complexes over the same ring
     R := ring G;
     R2 := ring X;
@@ -68,7 +68,7 @@ ghost(Complex,Complex) := (G,X) -> (
 )
 
 -- Creates a R-ghost map, only using degrees <= n
-ghost(Complex,ZZ) := (X,n) -> (
+ghost(Complex,ZZ) := ComplexMap => (X,n) -> (
     R := ring X;
     
     -- Construct the R-approximation of X
@@ -82,16 +82,16 @@ ghost(Complex,ZZ) := (X,n) -> (
     canonicalMap(cone(map(X,Q,fun)),X)
 )
 
-ghost(Complex) := (X) -> (
+ghost(Complex) := ComplexMap => (X) -> (
     ghost(X,max HH X)
 )
 
 ---------------------------------------------------------------
 -- This function creates the R-coghost map associated to the approximation
 ---------------------------------------------------------------
-coghost = method();
+coghost = method( TypicalValue => ComplexMap);
 
-coghost(Complex,Complex) := (G,X) -> (
+coghost(Complex,Complex) := ComplexMap => (G,X) -> (
     -- Check that G and X are complexes over the same ring
     R := ring G;
     R2 := ring X;
@@ -116,14 +116,18 @@ coghost(Complex,Complex) := (G,X) -> (
     canonicalMap(X[-1],cone(f))[1]
 )
 
-coghost(Complex) := (X) -> (
+coghost(Complex) := ComplexMap => (X) -> (
     coghost(complex((ring X)^1),X)
 )
 
 ---------------------------------------------------------------
 -- This function computes the level of X with respect to G
 ---------------------------------------------------------------
-level = method(Options => {MaxLevelAttempts => 10,LengthLimit => 10,LengthLimitGenerator => 5,Strategy => "ghost"});
+level = method( TypicalValue => ZZ,
+                Options => { MaxLevelAttempts => 10,
+                             LengthLimit => 10,
+                             LengthLimitGenerator => 5,
+                             Strategy => "ghost" } );
 
 level(Complex,Complex) := ZZ => opts -> (G,X) -> (
     -- Check that G and X are complexes over the same ring
@@ -210,7 +214,7 @@ level(Complex,Module) := ZZ => opts -> (G,N) -> (
 ---------------------------------------------------------------
 isPerfect = method( TypicalValue => Boolean );
 
-isPerfect(Complex) := (F) -> (
+isPerfect(Complex) := Boolean => (F) -> (
     -- First make the ring and its residue field for the complex M
     R := ring F;
     m := ideal(vars R);
@@ -226,7 +230,7 @@ isPerfect(Complex) := (F) -> (
     HH_d(T) == 0
 )
 -- Detects whether a module is perfect
-isPerfect(Module) := (M) -> (
+isPerfect(Module) := Boolean => (M) -> (
     isPerfect(complex(M))
 )
 
@@ -234,7 +238,7 @@ isPerfect(Module) := (M) -> (
 -- Computes the support variety of a module
 ---------------------------------------------------------------
 supportVariety = method( TypicalValue => Ideal);
-supportVariety(Module) := M -> (
+supportVariety(Module) := Ideal => M -> (
     R := ring M;
     k := R^1/ideal vars R;
     E := extKoszul(M);
@@ -245,8 +249,9 @@ supportVariety(Module) := M -> (
 ---------------------------------------------------------------
 -- 
 ---------------------------------------------------------------
-isBuilt = method( TypicalValue => Boolean)
-isBuilt(Module,Module) := (M,N) -> (
+isBuilt = method( TypicalValue => Boolean );
+
+isBuilt(Module,Module) := Boolean -> (M,N) -> (
     
     R := ring M;
     R2 := ring N;
@@ -269,7 +274,7 @@ isBuilt(Module,Module) := (M,N) -> (
 -- restriction of scalars
 ---------------------------------------------------------------
 
-restrict = method()
+restrict = method();
 
 restrict(Module) := Module => (M) -> (
     R := ring M;
@@ -319,8 +324,24 @@ restrict(ModuleMap) := ModuleMap => (f) -> (
     HH_0 h
 )
 
-restrict(Complex) := Complex => (C) (
-    -- TODO
+restrict(Complex) := Complex => (C) -> (
+    R := ring C;
+    
+    a := min C;
+    b := max C;
+    
+    -- If the complex is concentrated in one degree, just restrict that module
+    if (a == b) then return complex(restrict(C_a),Base => a);
+    
+    -- otherwise lift all differentials
+    -- list of restricted differentials
+    L := {};
+    
+    for i from (a + 1) to b do (
+        L = append(L,restrict(C.dd_i));
+    );
+    
+    complex(L,Base => a)
 )
 
 ---------------------------------------------------------------
@@ -328,7 +349,7 @@ restrict(Complex) := Complex => (C) (
 ---------------------------------------------------------------
 
 --same code as Ext, but in such a way that it will run for our purposes
-extKoszul = method()
+extKoszul = method();
 extKoszul(Complex,Complex) := Module => (M,N) -> (
     B := ring M;
     if B != ring(N) then error "need modules over the same ring";
@@ -427,7 +448,7 @@ extKoszul(Complex,Complex) := Module => (M,N) -> (
 -- under construction
 ---------------------------------------------------------------
 --not exported, auxiliary function to build non-proxy small modules
-findgs = method(TypicalValue => Ideal)
+findgs = method( TypicalValue => Ideal );
 findgs(RingElement) := Ideal => f -> (
     Q := ring f;
     R := Q/ideal(f);
@@ -442,7 +463,7 @@ findgs(List) := Ideal => L -> (
 )
 
 --not exported, auxiliary function to build non-proxy small modules
-makemap = method()
+makemap = method();
 makemap(Ideal,Ideal) := Matrix => (I,J) -> (
     Q := ring I;
     k := coefficientRing Q;
@@ -451,7 +472,7 @@ makemap(Ideal,Ideal) := Matrix => (I,J) -> (
     matrix apply(entries A, i -> apply(i,j -> lift(j,k)))
 )
 
-nonProxySmall = method()
+nonProxySmall = method();
 nonProxySmall(Ideal) := Ideal => I -> (
     listf := flatten entries gens I;
     Q := ring I;
@@ -790,6 +811,85 @@ doc ///
             m = ideal(vars R);
             k = complex(R^1/m)[2];
             isPerfect(k)         
+///
+
+doc ///
+    Key
+        restrict
+    Headline
+        view the given object as an object over the polynomial ring
+///
+
+doc ///
+    Key
+        (restrict,Module)
+    Headline
+        view the module as a module over the polynomial ring
+    Usage
+        restrict(M)
+    Inputs
+        M:Module
+    Outputs
+        :Module
+            over the polynomial ring
+    Description
+        Example
+            R = QQ[x]/ideal(x^2);
+            M = R^1/ideal(x);
+            restrict M
+///
+
+doc ///
+    Key
+        (restrict,ModuleMap)
+    Headline
+        view the map as a map over the polynomial ring
+    Usage
+        restrict(f)
+    Inputs
+        f:ModuleMap
+    Outputs
+        :ModuleMap
+            over the polynomial ring
+    Description
+        Example
+            R = QQ[x]/ideal(x^2);
+            f = map(R^1,R^1,{{x}})
+            g = restrict f
+            ring g
+        Example
+            R = QQ[x,y]/ideal(x*y);
+            f = inducedMap(R^1/ideal(x,y),R^1/ideal(x))
+            g = restrict f
+            g.source
+            g.target
+///
+
+doc ///
+    Key
+        (restrict,Complex)
+    Headline
+        view the complex as a complex over the polynomial ring
+    Usage
+        restrict(C)
+    Inputs
+        C:Complex
+    Outputs
+        :Complex
+            over the polynomial ring
+    Description
+        Example
+            needsPackage "Complexes";
+            R = QQ[x]/ideal(x^2);
+            F = complex(R^1/ideal(x),Base => 2)
+            restrict F
+        Example
+            needsPackage "Complexes";
+            R = QQ[x,y]/ideal(x*y);
+            F = freeResolution(R^1/ideal(x^2,y^2),LengthLimit => 2)
+            F.dd
+            G = restrict F
+            G.dd
 ///
 
 -----------------------------------------------------------

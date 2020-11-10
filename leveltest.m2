@@ -345,6 +345,7 @@ restart
 installPackage "ThickSubcategories"
 needsPackage "Complexes"
 
+-- Test Module Map
 R = QQ[x,y,z]/ideal(x^3,x*y)
 M = R^1/ideal(y)
 N = R^1/ideal(x,y)
@@ -352,16 +353,16 @@ f = inducedMap(N,M)
 
 restrict f
 
-p = presentation R
-Q = ring p
-I = trim ideal p
-c = numgens I
-f = apply(c,i->I_i)
+-- Test Complex
+R = QQ[x,y,z]/ideal(x^3,x*y)
+M = R^1/ideal(y)
+F = complex(M,Base => 3)
 
-pM = lift(presentation M,Q)
-M' = cokernel(pM | p ** id_(target pM) )
+restrict F
 
+F = freeResolution(M,LengthLimit => 2)
 
+G = restrict F
 
 
 
