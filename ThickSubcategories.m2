@@ -135,8 +135,8 @@ level(Complex,Complex) := ZZ => opts -> (G,X) -> (
     R2 := ring X;
     if not(R1 === R2) then error "Expected complexes over the same ring.";
     -- We need X to be a complex of free/projective modules, so that any map from X is zero iff it is null homotopic
-    rX := resolution(X, LengthLimit => opts.LengthLimit);
     rG := resolution(G, LengthLimit => opts.LengthLimitGenerator);
+    rX := resolution(X, LengthLimit => opts.LengthLimit);
     n := 0;
     f := id_(rX);
     g := f;
@@ -155,6 +155,7 @@ level(Complex,Complex) := ZZ => opts -> (G,X) -> (
         while ((not isNullHomotopic g) and (n < opts.MaxLevelAttempts)) do (
             rX = f.target;
             f = ghost(rG,rX);
+            
             -- minimize if possible
             if homogeneous then f = (minimize f.target).cache.minimizingMap * f;
             
@@ -191,6 +192,7 @@ level(Complex) := ZZ => opts -> (X) -> (
     );
     n
 )
+-- TODO: In the following, it might be better to use complex instead of freeResolution, since the resolution is taken again in level.
 level(Module) := ZZ => opts -> (M) -> (
     X := freeResolution(M,LengthLimit => opts.LengthLimit);
     level(X, MaxLevelAttempts => opts.MaxLevelAttempts, LengthLimit => opts.LengthLimit, Strategy => opts.Strategy)
@@ -646,7 +648,7 @@ doc ///
     Description
         Text
             Computes the level of the second complex with respect to the first complex. 
-            
+        Text
             When the input is one complex, then it computes the level with respect to the ring. 
         Example
             needsPackage "Complexes";
@@ -656,7 +658,6 @@ doc ///
         
         Text
             When the input is one module, then it computes the level of the module viewed as a complex concentrated in degree 0. The output is precisely the projective dimension $+1$. 
-        
         Example
             R = QQ[x,y]
             M = R^1/ideal(x,y)
@@ -664,17 +665,16 @@ doc ///
         
         Text
             When the input consists of two complexes (or modules or one complex and one module), then it computes the level of the first complex with respect to the second. 
-        
         Example
             R = QQ[x]
             M = R^1/ideal(x)
             N = R^1/ideal(x^4)
             level(M,N)
     Caveat
-        Over singular rings, level only returns correct answers wrt perfect complexes
-            
+        Level only returns the correct answer if both arguments are perfect.
     SeeAlso
         ghost
+        coghost
 ///
 
 doc ///
