@@ -284,11 +284,13 @@ restrict(Module) := Module => (M) -> (
     p := presentation R;
     Q := ring p;
     I := trim ideal p;
-    c := numgens I;
-    f := apply(c, i -> I_i); -- list of generators of I
+--     c := numgens I;
+--     f := apply(c, i -> I_i); -- list of generators of I
     
     pM := lift(presentation M,Q);
-    cokernel ( pM | p ** id_(target pM) )
+--     cokernel ( pM | p ** id_(target pM) )
+--     cokernel ( (p ** id_(target pM)) * pM ) -- does not work yet
+    cokernel ( (Q^1/I) ** pM )
 )
 
 -- This can be simplified, especially at the end. 
@@ -307,21 +309,25 @@ restrict(ModuleMap) := ModuleMap => (f) -> (
     -- lift the ring
     p := presentation R;
     Q := ring p;
+    I := trim ideal p;
     
     -- lift the presenentation
     pM := lift(F.dd_2,Q);
     pN := lift(G.dd_2,Q);
     
     -- add relations of M to the lifted presentation
-    lF := complex({pM | p ** id_(target pM)});
+--     lF := complex({pM | p ** id_(target pM)});
+    lF := complex({(Q^1/I) ** pM});
     
     -- compose lifted presentation of N with the surjection Q ->> R
-    lG := complex({(inducedMap(cokernel p,p.target) ** id_(target pN)) * pN});
+--     lG := complex({(inducedMap(cokernel p,p.target) ** id_(target pN)) * pN});
+    lG := complex({(Q^1/I) ** pN});
     
     -- create lifted/induced complex map g: lF -> lG
-    h := map(lG,lF,hashTable{ 
-        0 => (inducedMap(cokernel p,p.target) ** id_(target pN)) * lift(g_1,Q),
-        1 => (lift(g_2,Q) | map(lG_1,p.source ** (target pM),0))});
+--     h := map(lG,lF,hashTable{ 
+--         0 => (inducedMap(cokernel p,p.target) ** id_(target pN)) * lift(g_1,Q),
+--         1 => (lift(g_2,Q) | map(lG_1,p.source ** (target pM),0))});
+    h := map(lG,lF,hashTable{0 => ((Q^1/I) ** lift(g_1,Q))});
         
     HH_0 h
 )
