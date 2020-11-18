@@ -42,7 +42,8 @@ needsPackage "Depth"
 ---------------------------------------------------------------
 ghost = method( TypicalValue => ComplexMap );
 
-ghost(Complex,Complex) := ComplexMap => (G,X) -> (
+-- Creates a map with source X that is G-ghost in degrees <= n
+ghost(Complex,Complex,ZZ) := ComplexMap => (G,X,n) -> (
     -- Check that G and X are complexes over the same ring
     R := ring G;
     R2 := ring X;
@@ -52,7 +53,7 @@ ghost(Complex,Complex) := ComplexMap => (G,X) -> (
     
     -- Collect the generators of H: maps f_i: G[n_i] -> X
     L := {};
-    for i from min H to max H do (
+    for i from min H to n do (
         K := ker H.dd_i;
         Q := cover K;
         -- induced module map Q -> H_i
@@ -67,7 +68,11 @@ ghost(Complex,Complex) := ComplexMap => (G,X) -> (
     canonicalMap(cone(f),X)
 )
 
--- Creates a R-ghost map, only using degrees <= n
+ghost(Complex,Complex) := ComplexMap => (G,X) -> (
+    ghost(G,X,min G + max X)
+)
+
+-- Creates a map with source X that is R-ghost in degrees <= n
 ghost(Complex,ZZ) := ComplexMap => (X,n) -> (
     R := ring X;
     
@@ -82,6 +87,7 @@ ghost(Complex,ZZ) := ComplexMap => (X,n) -> (
     canonicalMap(cone(map(X,Q,fun)),X)
 )
 
+-- Creates an R-ghost map with source X
 ghost(Complex) := ComplexMap => (X) -> (
     ghost(X,max HH X)
 )
@@ -544,13 +550,15 @@ doc ///
     Key
         ghost
         (ghost, Complex, Complex)
+        (ghost, Complex, Complex, ZZ)
         (ghost, Complex)
         (ghost, Complex, ZZ)
     Headline
         constructs a ghost map
     Usage
-        ghost X
         ghost(G,X)
+        ghost(G,X,n)
+        ghost X
         ghost(X,n)
     Inputs
         X:Complex
@@ -569,6 +577,18 @@ doc ///
             G = freeResolution(R^1/ideal(x))
             f = ghost(G,X)
             (prune HH Hom(G,f)) == 0
+        Text
+            When additionally an integer $n$ is given, the output is a ghost map in degrees $\leq n$. 
+        Example
+            needsPackage "Complexes";
+            R = QQ[x,y]
+            X = complex({map(R^1/ideal(x^2),R^1/ideal(x*y),{{x}}),map(R^1/ideal(x*y),R^1/ideal(y^2),{{x}})})
+            G = freeResolution(R^1/ideal(y^2))
+            f = ghost(G,X,1)
+            (prune HH_(-1) Hom(G,f)) == 0
+            (prune HH_0 Hom(G,f)) == 0
+            (prune HH_1 Hom(G,f)) == 0
+            (prune HH_2 Hom(G,f)) == 0
         Text
             For one complex $X$, this method returns a ghost map with source $X$ with respect to the ring.
         Example
