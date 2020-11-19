@@ -284,11 +284,12 @@ isBuilt(Module,Module) := Boolean -> (M,N) -> (
 
 restrict = method();
 
-restrict(Module,Ring) := Module => (M,Q) -> (
+restrict(Module) := Module => (M) -> (
     R := ring M;
-    if not isQuotientOf(Q,R) then error "expected ring of module to be a quotient of second input";
     
-    I := kernel(map(R,Q,flatten entries vars R));
+    p := presentation R;
+    Q := ring p;
+    I := trim ideal p;
 --     c := numgens I;
 --     f := apply(c, i -> I_i); -- list of generators of I
     
@@ -298,12 +299,11 @@ restrict(Module,Ring) := Module => (M,Q) -> (
     cokernel ( (Q^1/I) ** pM )
 )
 
-restrict(Module) := Module => (M) -> (
+restrict(Module,Ring) := Module => (M,Q) -> (
     R := ring M;
+    if not isQuotientOf(Q,R) then error "expected ring of module to be a quotient of second input";
     
-    p := presentation R;
-    Q := ring p;
-    I := trim ideal p;
+    I := kernel(map(R,Q,flatten entries vars R));
 --     c := numgens I;
 --     f := apply(c, i -> I_i); -- list of generators of I
     
@@ -918,34 +918,67 @@ doc ///
     Key
         (restrict,Module)
     Headline
-        view the module as a module over the polynomial ring
+        view the module as a module over the quotient ring
+    Description
+        Text
+            See @TO (restrict,Module,Ring)@
+///
+
+doc ///
+    Key
+        (restrict,Module,Ring)
+    Headline
+        view the module as a module over an ambient ring
     Usage
         restrict(M)
+        restrict(M,Q)
     Inputs
         M:Module
+        Q:Ring
     Outputs
         :Module
-            over the polynomial ring
+            over Q or the polynomial ring
     Description
+        Text
+            When no ring is given, the module is lifted to the ambient polynomial ring of the ring of the module. 
         Example
             R = QQ[x]/ideal(x^2);
             M = R^1/ideal(x);
             restrict M
+        Example
+            Q = QQ[x]/ideal(x^3);
+            R = Q/ideal(x^2);
+            M = R^1/ideal(x);
+            restrict(M,Q)
 ///
 
 doc ///
     Key
         (restrict,ModuleMap)
     Headline
-        view the map as a map over the polynomial ring
+        view the map as a map over the quotient ring
+    Description
+        Text
+            See @TO (restrict,ModuleMap,Ring)@
+///
+
+doc ///
+    Key
+        (restrict,ModuleMap,Ring)
+    Headline
+        view the map as a map over an ambient ring
     Usage
         restrict(f)
+        restrict(f,Q)
     Inputs
         f:ModuleMap
+        Q:Ring
     Outputs
         :ModuleMap
-            over the polynomial ring
+            over Q or the polynomial ring
     Description
+        Text
+            When no ring is given, the map is lifted to the ambient polynomial ring of the ring of the map. 
         Example
             R = QQ[x]/ideal(x^2);
             f = map(R^1,R^1,{{x}})
@@ -957,21 +990,41 @@ doc ///
             g = restrict f
             g.source
             g.target
+        Example
+            Q = QQ[x]/ideal(x^3);
+            R = Q/ideal(x^2);
+            f = map(R^1,R^1,{{x}})
+            g = restrict(f,Q)
+            ring g
 ///
 
 doc ///
     Key
         (restrict,Complex)
     Headline
-        view the complex as a complex over the polynomial ring
+        view the complex as a complex over the quotient ring
+    Description
+        Text
+            See @TO (restrict,Complex,Ring)@
+///
+
+doc ///
+    Key
+        (restrict,Complex,Ring)
+    Headline
+        view the complex as a complex over an ambient ring
     Usage
         restrict(C)
+        restrict(C,Q)
     Inputs
         C:Complex
+        Q:Ring
     Outputs
         :Complex
-            over the polynomial ring
+            over Q or the polynomial ring
     Description
+        Text
+            When no ring is given, the complex is lifted to the ambient polynomial ring of the ring of the complex. 
         Example
             needsPackage "Complexes";
             R = QQ[x]/ideal(x^2);
@@ -984,6 +1037,12 @@ doc ///
             F.dd
             G = restrict F
             G.dd
+        Example
+            needsPackage "Complexes";
+            Q = QQ[x]/ideal(x^3);
+            R = Q/ideal(x^2);
+            F = complex(R^1/ideal(x),Base => 2)
+            restrict(F,Q)
 ///
 
 -----------------------------------------------------------
