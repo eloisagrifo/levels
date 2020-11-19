@@ -284,6 +284,20 @@ isBuilt(Module,Module) := Boolean -> (M,N) -> (
 
 restrict = method();
 
+restrict(Module,Ring) := Module => (M,Q) -> (
+    R := ring M;
+    if not isQuotientOf(Q,R) then error "expected ring of module to be a quotient of second input";
+    
+    I := kernel(map(R,Q,flatten entries vars R));
+--     c := numgens I;
+--     f := apply(c, i -> I_i); -- list of generators of I
+    
+    pM := lift(presentation M,Q);
+--     cokernel ( pM | p ** id_(target pM) )
+--     cokernel ( (p ** id_(target pM)) * pM ) -- does not work yet
+    cokernel ( (Q^1/I) ** pM )
+)
+
 restrict(Module) := Module => (M) -> (
     R := ring M;
     
