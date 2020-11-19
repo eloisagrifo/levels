@@ -314,6 +314,44 @@ restrict(Module) := Module => (M) -> (
 )
 
 -- This can be simplified, especially at the end. 
+restrict(ModuleMap,Ring) := ModuleMap => (f,Q) -> (
+    M := f.source;
+    N := f.target;
+    R := ring f;
+    if not isQuotientOf(Q,R) then error "expected ring of module to be a quotient of second input";
+    
+    -- R-complexes containing the modules and their presentation
+    F := cone(resolutionMap(complex(M),LengthLimit=>1));
+    G := cone(resolutionMap(complex(N),LengthLimit=>1));
+    
+    -- extend the map to the presentation of the modules
+    g := extend(G,F,f);
+    
+    -- lift the ring
+    I := kernel(map(R,Q,flatten entries vars R));
+    
+    -- lift the presenentation
+    pM := lift(F.dd_2,Q);
+    pN := lift(G.dd_2,Q);
+    
+    -- add relations of M to the lifted presentation
+--     lF := complex({pM | p ** id_(target pM)});
+    lF := complex({(Q^1/I) ** pM});
+    
+    -- compose lifted presentation of N with the surjection Q ->> R
+--     lG := complex({(inducedMap(cokernel p,p.target) ** id_(target pN)) * pN});
+    lG := complex({(Q^1/I) ** pN});
+    
+    -- create lifted/induced complex map g: lF -> lG
+--     h := map(lG,lF,hashTable{ 
+--         0 => (inducedMap(cokernel p,p.target) ** id_(target pN)) * lift(g_1,Q),
+--         1 => (lift(g_2,Q) | map(lG_1,p.source ** (target pM),0))});
+    h := map(lG,lF,hashTable{0 => ((Q^1/I) ** lift(g_1,Q))});
+        
+    HH_0 h
+)
+
+-- This can be simplified, especially at the end. 
 restrict(ModuleMap) := ModuleMap => (f) -> (
     M := f.source;
     N := f.target;
@@ -352,9 +390,25 @@ restrict(ModuleMap) := ModuleMap => (f) -> (
     HH_0 h
 )
 
-restrict(Complex) := Complex => (C) -> (
-    R := ring C;
+restrict(Complex,Ring) := Complex => (C,Q) -> (
+    a := min C;
+    b := max C;
     
+    -- If the complex is concentrated in one degree, just restrict that module
+    if (a == b) then return complex(restrict(C_a,Q),Base => a);
+    
+    -- otherwise lift all differentials
+    -- list of restricted differentials
+    L := {};
+    
+    for i from (a + 1) to b do (
+        L = append(L,restrict(C.dd_i,Q));
+    );
+    
+    complex(L,Base => a)
+)
+
+restrict(Complex) := Complex => (C) -> (
     a := min C;
     b := max C;
     
