@@ -916,17 +916,8 @@ doc ///
 
 doc ///
     Key
-        (restrict,Module)
-    Headline
-        view the module as a module over the quotient ring
-    Description
-        Text
-            See @TO (restrict,Module,Ring)@
-///
-
-doc ///
-    Key
         (restrict,Module,Ring)
+        (restrict,Module)
     Headline
         view the module as a module over an ambient ring
     Usage
@@ -954,17 +945,8 @@ doc ///
 
 doc ///
     Key
-        (restrict,ModuleMap)
-    Headline
-        view the map as a map over the quotient ring
-    Description
-        Text
-            See @TO (restrict,ModuleMap,Ring)@
-///
-
-doc ///
-    Key
         (restrict,ModuleMap,Ring)
+        (restrict,ModuleMap)
     Headline
         view the map as a map over an ambient ring
     Usage
@@ -1000,17 +982,8 @@ doc ///
 
 doc ///
     Key
-        (restrict,Complex)
-    Headline
-        view the complex as a complex over the quotient ring
-    Description
-        Text
-            See @TO (restrict,Complex,Ring)@
-///
-
-doc ///
-    Key
         (restrict,Complex,Ring)
+        (restrict,Complex)
     Headline
         view the complex as a complex over an ambient ring
     Usage
