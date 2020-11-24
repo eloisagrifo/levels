@@ -290,12 +290,10 @@ restrict(Module) := Module => (M) -> (
     p := presentation R;
     Q := ring p;
     I := trim ideal p;
---     c := numgens I;
---     f := apply(c, i -> I_i); -- list of generators of I
     
     pM := lift(presentation M,Q);
+    -- Both of the following work, but the last is the most efficient.
 --     cokernel ( pM | p ** id_(target pM) )
---     cokernel ( (p ** id_(target pM)) * pM ) -- does not work yet
     cokernel ( (Q^1/I) ** pM )
 )
 
@@ -304,12 +302,9 @@ restrict(Module,Ring) := Module => (M,Q) -> (
     if not isQuotientOf(Q,R) then error "expected ring of module to be a quotient of second input";
     
     I := kernel(map(R,Q,flatten entries vars R));
---     c := numgens I;
---     f := apply(c, i -> I_i); -- list of generators of I
     
     pM := lift(presentation M,Q);
 --     cokernel ( pM | p ** id_(target pM) )
---     cokernel ( (p ** id_(target pM)) * pM ) -- does not work yet
     cokernel ( (Q^1/I) ** pM )
 )
 
@@ -335,17 +330,16 @@ restrict(ModuleMap,Ring) := ModuleMap => (f,Q) -> (
     pN := lift(G.dd_2,Q);
     
     -- add relations of M to the lifted presentation
+    -- both work, but last more efficient
 --     lF := complex({pM | p ** id_(target pM)});
     lF := complex({(Q^1/I) ** pM});
     
     -- compose lifted presentation of N with the surjection Q ->> R
+    -- both work, but last more efficient
 --     lG := complex({(inducedMap(cokernel p,p.target) ** id_(target pN)) * pN});
     lG := complex({(Q^1/I) ** pN});
     
-    -- create lifted/induced complex map g: lF -> lG
---     h := map(lG,lF,hashTable{ 
---         0 => (inducedMap(cokernel p,p.target) ** id_(target pN)) * lift(g_1,Q),
---         1 => (lift(g_2,Q) | map(lG_1,p.source ** (target pM),0))});
+    -- create lifted/induced complex map g: lF -> lG only in degree 0
     h := map(lG,lF,hashTable{0 => ((Q^1/I) ** lift(g_1,Q))});
         
     HH_0 h
@@ -374,17 +368,16 @@ restrict(ModuleMap) := ModuleMap => (f) -> (
     pN := lift(G.dd_2,Q);
     
     -- add relations of M to the lifted presentation
+    -- both work, but last more efficient
 --     lF := complex({pM | p ** id_(target pM)});
     lF := complex({(Q^1/I) ** pM});
     
     -- compose lifted presentation of N with the surjection Q ->> R
+    -- both work, but last more efficient
 --     lG := complex({(inducedMap(cokernel p,p.target) ** id_(target pN)) * pN});
     lG := complex({(Q^1/I) ** pN});
     
-    -- create lifted/induced complex map g: lF -> lG
---     h := map(lG,lF,hashTable{ 
---         0 => (inducedMap(cokernel p,p.target) ** id_(target pN)) * lift(g_1,Q),
---         1 => (lift(g_2,Q) | map(lG_1,p.source ** (target pM),0))});
+    -- create lifted/induced complex map g: lF -> lG only in degree 0
     h := map(lG,lF,hashTable{0 => ((Q^1/I) ** lift(g_1,Q))});
         
     HH_0 h
