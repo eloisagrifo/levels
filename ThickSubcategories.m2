@@ -249,7 +249,7 @@ supportVariety = method( TypicalValue => Ideal);
 supportVariety(Module) := Ideal => M -> (
     R := ring M;
     k := R^1/ideal vars R;
-    E := extKoszul(M);
+    E := extKoszul(complex(M),complex(M));
     S := ring E;
     radical ann(E)
 )
@@ -427,7 +427,7 @@ restrict(Complex) := Complex => (C) -> (
 extKoszul = method();
 extKoszul(Complex,Complex) := Module => (M,N) -> (
     B := ring M;
-    if B != ring(N) then error "need modules over the same ring";
+--    if B != ring(N) then error "need modules over the same ring";
     if not isCommutative B
     then error "'Ext' not implemented yet for noncommutative rings.";
     if not isHomogeneous B
@@ -446,13 +446,13 @@ extKoszul(Complex,Complex) := Module => (M,N) -> (
     c := numgens I;
     f := apply(c, i -> I_i);
     
-    pM := lift(presentation M,A);
+    M' := restrict(M,A);
+    
 --    N := coker(vars B);
 --    pN := lift(presentation N,A);
-    M' := cokernel ( pM | p ** id_(target pM) );
 --    N' := cokernel ( pN | p ** id_(target pN) );
     assert isHomogeneous M';
-    C := complete resolution M';
+    C := resolution M';
     X := getSymbol "X";
     x := getSymbol "x";
     K := coefficientRing A;
@@ -470,7 +470,7 @@ extKoszul(Complex,Complex) := Module => (M,N) -> (
        blks := new MutableHashTable;
        blks#(exponents 1_Rmon) = C.dd;
        scan(0 .. c-1, i -> 
-            blks#(exponents Rmon_i) = nullhomotopy (- f_i*id_C));
+            blks#(exponents Rmon_i) = nullHomotopy (- f_i*id_C));
        -- a helper function to list the factorizations of a monomial
        factorizations := (gamma) -> (
          -- Input: gamma is the list of exponents for a monomial
@@ -492,7 +492,7 @@ extKoszul(Complex,Complex) := Module => (M,N) -> (
                    then blks#alpha * blks#beta
                    else 0));
                -- compute and save the nonzero nullhomotopies
-               if s != 0 then blks#gamma = nullhomotopy s;
+               if s != 0 then blks#gamma = nullHomotopy s;
                ))));
        -- make a free module whose basis elements have the right degrees
        spots := C -> sort select(keys C, i -> class i === ZZ);

@@ -364,6 +364,3 @@ F = freeResolution(M,LengthLimit => 2)
 
 G = restrict F
 
-
-
-
