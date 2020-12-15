@@ -299,6 +299,9 @@ restrict(Module) := Module => (M) -> (
 
 restrict(Module,Ring) := Module => (M,Q) -> (
     R := ring M;
+    
+    if (R === Q) then return M;
+    
     if not isQuotientOf(Q,R) then error "expected ring of module to be a quotient of second input";
     
     I := kernel(map(R,Q,flatten entries vars R));
@@ -313,6 +316,9 @@ restrict(ModuleMap,Ring) := ModuleMap => (f,Q) -> (
     M := f.source;
     N := f.target;
     R := ring f;
+    
+    if (R === Q) then return f;
+    
     if not isQuotientOf(Q,R) then error "expected ring of module to be a quotient of second input";
     
     -- R-complexes containing the modules and their presentation
