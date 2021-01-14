@@ -30,6 +30,7 @@ export {
 
 needsPackage "Complexes"
 needsPackage "Depth"
+needsPackage "MinimalPrimes"
 
 ---------------------------------------------------------------
 ---------------------------------------------------------------
