@@ -475,8 +475,13 @@ extKoszul(Complex,Complex) := Module => (M,N) -> (
     Rmon := monoid [X_1 .. X_c,Degrees=>{c:{2}}];
     -- make group ring, so 'basis' can enumerate the monomials
     R := K Rmon;
+    
     C = chainComplex(C);
     homotopies := makeHomotopies(matrix{f},C);
+    -- Problem: All of this happens over the wrong ring, should be over R, but happens over A (they are isomorphic). Is this a problem? Might conflict later with S.
+    -- The entries of the hash table are indexed by {J,i} (different than before)
+    
+    -- keys does different things for Complex and ChainComplex. This is just about getting all the degrees where C is defined.
     spots := C -> sort select(keys C, i -> class i === ZZ);
     Cstar := S^(apply(spots C,i -> toSequence apply(degrees C_i, d -> prepend(i,d))));
     
