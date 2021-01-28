@@ -561,3 +561,98 @@ extKoszul(Complex,Complex) := Module => (M,N) -> (
     tot
 )
     
+
+---testing extKoszul jan 28
+needsPackage "CompleteIntersectionResolutions"
+uninstallPackage "ThickSubcategories"
+uninstallPackage "Complexes"
+restart
+path=append(path,"~/Documents/Github/levels");
+installPackage "Complexes"
+installPackage "ThickSubcategories"
+loadPackage "ThickSubcategories"
+needsPackage "Complexes"
+k = QQ
+R = k[x]/(x^2)
+M = complex(R^1/(x))
+extKoszul(complex(M),complex(M))
+--extKoszul = method();
+--extKoszul(Complex,Complex) := Module => (M,N) -> (
+    B = ring M;
+--    if B != ring(N) then error "need modules over the same ring";
+    if not isCommutative B
+    then error "'Ext' not implemented yet for noncommutative rings.";
+    if not isHomogeneous B
+    then error "'Ext' received modules over an inhomogeneous ring";
+    if ((not isHomogeneous M) or (not isHomogeneous N))
+    then error "received an inhomogeneous module";
+    
+    --this needs to be fixed later -- answer over the wrong ring
+    if M == 0 then return B^0;
+    if N == 0 then return B^0;
+    
+    p = presentation B;
+    A = ring p;
+    I = ideal mingens ideal p;
+    n = numgens A;
+    c = numgens I;
+    f = apply(c, i -> I_i);
+    
+    M' = restrict(M,A);
+    assert isHomogeneous M'; -- is this necessary, that is is there a way that the construction could give a non-homogeneous module?
+    
+--    N := coker(vars B);
+--    pN := lift(presentation N,A);
+--    N' := cokernel ( pN | p ** id_(target pN) );
+    
+    C = resolution(M');
+    
+    -- Construct ring of cohomological operators
+    K = coefficientRing A;
+    X = getSymbol "X";
+    S = K[ X_1 .. X_c, toSequence gens A,
+           Degrees => { apply(0 .. c-1, i -> prepend(-2, - degree f_i)),
+                        apply(0 .. n-1, j -> prepend( 0,   degree A_j))},
+           Heft => {-2,1} ];
+    
+    -- make a monoid whose monomials can be used as indices
+    Rmon = monoid [X_1 .. X_c,Degrees=>{c:{2}}];
+    -- make group ring, so 'basis' can enumerate the monomials
+    R = K Rmon;
+    
+    C = chainComplex(C);
+    homotopies = makeHomotopies(matrix{f},C);
+    -- Problem: All of this happens over the wrong ring, should be over R, but happens over A (they are isomorphic). Is this a problem? Might conflict later with S.
+    -- The entries of the hash table are indexed by {J,i} (different than before)
+    
+    -- keys does different things for Complex and ChainComplex. This is just about getting all the degrees where C is defined.
+    spots = C -> sort select(keys C, i -> class i === ZZ);
+    Cstar = S^(apply(spots C,i -> toSequence apply(degrees C_i, d -> prepend(i,d))));
+    
+    -- assemble the matrix from its blocks.
+    -- We omit the sign (-1)^(n+1) which would ordinarily be used,
+    -- which does not affect the homology.
+    toS = map(S,A,apply(toList(c .. c+n-1), i -> S_i),DegreeMap => prepend_0);
+    
+    forDelta = apply(apply(keys homotopies, first), 
+	m -> product(apply(m, i -> S_i))); 
+    --each entry of forDelta (in order) and multiply by
+    -- whatever the correct substitute for
+    --toS sum  homotopies#m
+    
+    Delta = map( Cstar,
+                  Cstar, 
+                  transpose sum(keys homotopies), m -> S_(m_0) * toS sum  homotopies#m),
+                  Degree => { -1, degreeLength A:0 });
+    DeltaBar = Delta ** (toS ** M');
+    if debugLevel > 10 then (
+        assert isHomogeneous DeltaBar;
+        assert(DeltaBar * DeltaBar == 0);
+        stderr << describe ring DeltaBar <<endl;
+        stderr << toExternalString DeltaBar << endl;
+    );
+    
+    -- now compute the total Ext as a single homology module
+    tot = minimalPresentation homology(DeltaBar,DeltaBar);
+    tot
+)
