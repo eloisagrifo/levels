@@ -563,7 +563,7 @@ extKoszul(Complex,Complex) := Module => (M,N) -> (
     
 
 ---testing extKoszul jan 28
-needsPackage "CompleteIntersectionResolutions"
+
 uninstallPackage "ThickSubcategories"
 uninstallPackage "Complexes"
 restart
@@ -572,9 +572,19 @@ installPackage "Complexes"
 installPackage "ThickSubcategories"
 loadPackage "ThickSubcategories"
 needsPackage "Complexes"
+needsPackage "CompleteIntersectionResolutions"
 k = QQ
 R = k[x]/(x^2)
 M = complex(R^1/(x))
+extKoszul(complex(M),complex(M))
+
+restart
+loadPackage "ThickSubcategories"
+needsPackage "Complexes"
+needsPackage "CompleteIntersectionResolutions"
+k = QQ
+R = k[x,y]/(x^2,y^2)
+M = complex(R^1/(x,y))
 extKoszul(complex(M),complex(M))
 --extKoszul = method();
 --extKoszul(Complex,Complex) := Module => (M,N) -> (
@@ -627,15 +637,36 @@ extKoszul(complex(M),complex(M))
     
     -- keys does different things for Complex and ChainComplex. This is just about getting all the degrees where C is defined.
     spots = C -> sort select(keys C, i -> class i === ZZ);
-    Cstar = S^(apply(spots C,i -> toSequence apply(degrees C_i, d -> prepend(i,d))));
-    
+    Cstar = S^(apply(spots C,i -> toSequence apply(degrees C_i, d -> prepend(i,d))))
     -- assemble the matrix from its blocks.
     -- We omit the sign (-1)^(n+1) which would ordinarily be used,
     -- which does not affect the homology.
     toS = map(S,A,apply(toList(c .. c+n-1), i -> S_i),DegreeMap => prepend_0);
     
-    forDelta = apply(apply(keys homotopies, first), 
-	m -> product(apply(m, i -> S_i))); 
+
+    pow = o -> product toList(apply(pairs o, i -> S_(i_0)^(i_1)))
+    
+    r = rank Cstar;
+    
+    makematrix = (L,M) -> (
+	xis = L_0;
+	i = xis_0;
+	j = xis_1;
+	m = L_1;
+	rows = numRows M;
+	columns = numColumns M;
+	R := ring M;
+	bigMatrix = matrix table(r,r, (p,q) -> (
+	    if (
+		((m+2*(i+j)-1 + rows) > p) and (p >= (m+2*(i+j)-1)) and (
+		(m + columns) > q) and (q >= m)) then M_(p-(m+2*(i+j)-1),q-m) else 0)
+    );
+    promote(bigMatrix,R)
+)
+
+
+    mapsfromhomotopies = sum(apply(keys homotopies, i -> pow(i_0)*toS(makematrix(i,homotopies#i))))
+    
     --each entry of forDelta (in order) and multiply by
     -- whatever the correct substitute for
     --toS sum  homotopies#m
@@ -656,3 +687,16 @@ extKoszul(complex(M),complex(M))
     tot = minimalPresentation homology(DeltaBar,DeltaBar);
     tot
 )
+
+
+
+
+
+
+
+
+
+
+
+
+
