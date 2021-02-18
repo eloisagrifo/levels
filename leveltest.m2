@@ -571,6 +571,11 @@ path=append(path,"~/Documents/Github/levels");
 installPackage "Complexes"
 installPackage "ThickSubcategories"
 loadPackage "ThickSubcategories"
+
+uninstallPackage "ThickSubcategories"
+uninstallPackage "Complexes"
+restart
+path=append(path,"~/Documents/Github/levels");
 needsPackage "Complexes"
 needsPackage "CompleteIntersectionResolutions"
 k = QQ
@@ -579,7 +584,7 @@ M = complex(R^1/(x))
 extKoszul(complex(M),complex(M))
 
 restart
-loadPackage "ThickSubcategories"
+needsPackage "ThickSubcategories"
 needsPackage "Complexes"
 needsPackage "CompleteIntersectionResolutions"
 k = QQ
@@ -643,7 +648,6 @@ extKoszul(complex(M),complex(M))
     -- which does not affect the homology.
     toS = map(S,A,apply(toList(c .. c+n-1), i -> S_i),DegreeMap => prepend_0);
     
-
     pow = o -> product toList(apply(pairs o, i -> S_(i_0)^(i_1)))
     
     r = rank Cstar;
@@ -663,19 +667,33 @@ extKoszul(complex(M),complex(M))
     );
     promote(bigMatrix,R)
 )
-
-
+   
+    
+    
     mapsfromhomotopies = sum(apply(keys homotopies, i -> pow(i_0)*toS(makematrix(i,homotopies#i))))
+    
+    Delta = map( Cstar,
+                  Cstar, 
+                  transpose mapsfromhomotopies,
+                  Degree => { -1, degreeLength A:0 });
+
+    
+    --thing we are going to tensor with delta   
+    stuff = select(keys homotopies, o -> o_0 == apply(toList(1 .. c), i -> 0))
+    NotDelta = sum(apply(stuff, i -> toS(makematrix(i,homotopies#i))))
+    
+    DeltaBar = id_Cstar ** NotDelta + Delta ** id_Cstar
+
+    homology(DeltaBar, DeltaBar)    
+
+    homology(Delta ** NotDelta, Delta ** NotDelta)--not right
     
     --each entry of forDelta (in order) and multiply by
     -- whatever the correct substitute for
     --toS sum  homotopies#m
     
-    Delta = map( Cstar,
-                  Cstar, 
-                  transpose sum(keys homotopies), m -> S_(m_0) * toS sum  homotopies#m),
-                  Degree => { -1, degreeLength A:0 });
-    DeltaBar = Delta ** (toS ** M');
+    	      
+    DeltaBar = complex(Delta) ** (toS ** M');
     if debugLevel > 10 then (
         assert isHomogeneous DeltaBar;
         assert(DeltaBar * DeltaBar == 0);
@@ -687,6 +705,35 @@ extKoszul(complex(M),complex(M))
     tot = minimalPresentation homology(DeltaBar,DeltaBar);
     tot
 )
+
+
+
+
+--other useless shit
+
+Cstar
+    (transpose Delta)
+    makematrix(C.dd,)
+    sum(apply(keys homotopies, i -> pow(i_0)*toS(makematrix(i,homotopies#i))))
+    M = S^(apply(spots M',i -> toSequence apply(degrees M'_i, d -> prepend(i,d))))
+    
+    
+    CM = toS ** M';
+	
+    SM = gradedModule(chainComplex CM);
+    
+    SMmap = gradedModuleMap(components(CM.dd));
+    
+    map(Cstar ** SM, Cstar ** SM, Delta ** id_(SM) + id_(Cstar) ** SMmap)  
+    
+    
+    Delta ** id_(SM) 
+
+    + id_(Cstar) ** SMmap
+    
+    
+    Cstar ** module(SM)
+
 
 
 
