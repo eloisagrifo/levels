@@ -584,13 +584,14 @@ M = complex(R^1/(x))
 extKoszul(complex(M),complex(M))
 
 restart
-needsPackage "ThickSubcategories"
+path=append(path,"~/Documents/Github/levels");
 needsPackage "Complexes"
 needsPackage "CompleteIntersectionResolutions"
+needsPackage "ThickSubcategories"
 k = QQ
 R = k[x,y]/(x^2,y^2)
 M = complex(R^1/(x,y))
-extKoszul(complex(M),complex(M))
+--extKoszul(complex(M),complex(M))
 --extKoszul = method();
 --extKoszul(Complex,Complex) := Module => (M,N) -> (
     B = ring M;
@@ -667,7 +668,36 @@ extKoszul(complex(M),complex(M))
     );
     promote(bigMatrix,R)
 )
-   
+ 
+     
+     firanks = apply(toList(min(C) .. max(C)), o -> rank(C_o))
+     
+     xis = {0,0}
+     
+     
+     neg = n -> if n<0 then 0 else n;
+     
+     
+     
+      makematrix = (L,M) -> (
+	diag = sum L_0;
+	m = L_1;
+	
+	topleftrow = sum take(firanks, neg(m+2*diag - 1 - min C));
+	topleftcolumn = sum take(firanks, neg(m - min C));
+	
+	rows = numRows M;
+	columns = numColumns M;
+	
+	R := ring M;
+	bigMatrix = matrix table(r,r, (p,q) -> (
+	if (
+	    (p >= topleftrow) and (p < (topleftrow + rows)) and 
+	    (q >= topleftcolumn) and (q < (topleftcolumn + columns))
+	    )
+	then M_(p-topleftrow,q-topleftcolumn) else 0));
+    promote(bigMatrix,R)
+)  
     
     
     mapsfromhomotopies = sum(apply(keys homotopies, i -> pow(i_0)*toS(makematrix(i,homotopies#i))))
