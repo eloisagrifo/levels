@@ -614,7 +614,7 @@ M = complex(R^1/(x,y))
     c = numgens I;
     f = apply(c, i -> I_i);
     
-    M' = restrict(M,A);
+    M' = restrict(M ** B,A);
     assert isHomogeneous M'; -- is this necessary, that is is there a way that the construction could give a non-homogeneous module?
     
 --    N := coker(vars B);
@@ -652,28 +652,9 @@ M = complex(R^1/(x,y))
     pow = o -> product toList(apply(pairs o, i -> S_(i_0)^(i_1)))
     
     r = rank Cstar;
-    
-    makematrix = (L,M) -> (
-	xis = L_0;
-	i = xis_0;
-	j = xis_1;
-	m = L_1;
-	rows = numRows M;
-	columns = numColumns M;
-	R := ring M;
-	bigMatrix = matrix table(r,r, (p,q) -> (
-	    if (
-		((m+2*(i+j)-1 + rows) > p) and (p >= (m+2*(i+j)-1)) and (
-		(m + columns) > q) and (q >= m)) then M_(p-(m+2*(i+j)-1),q-m) else 0)
-    );
-    promote(bigMatrix,R)
-)
  
      
      firanks = apply(toList(min(C) .. max(C)), o -> rank(C_o))
-     
-     xis = {0,0}
-     
      
      neg = n -> if n<0 then 0 else n;
      
@@ -703,16 +684,25 @@ M = complex(R^1/(x,y))
     mapsfromhomotopies = sum(apply(keys homotopies, i -> pow(i_0)*toS(makematrix(i,homotopies#i))))
     
     Delta = map( Cstar,
-                  Cstar, 
-                  transpose mapsfromhomotopies,
-                  Degree => { -1, degreeLength A:0 });
+                 Cstar, 
+                 transpose mapsfromhomotopies,
+                 Degree => { -1, degreeLength A:0 });
 
     
     --thing we are going to tensor with delta   
     stuff = select(keys homotopies, o -> o_0 == apply(toList(1 .. c), i -> 0))
-    NotDelta = sum(apply(stuff, i -> toS(makematrix(i,homotopies#i))))
+    NotDeltaMaps = sum(apply(stuff, i -> toS(makematrix(i,homotopies#i))))
+    
+    NotDelta = map( Cstar,
+                  Cstar, 
+                  NotDeltaMaps,
+                  Degree => { -1, degreeLength A:0 });
     
     DeltaBar = id_Cstar ** NotDelta + Delta ** id_Cstar
+    
+    Mdelta = apply(toList((min M) .. (max M)), i -> M.dd_i)
+    
+    
 
     homology(DeltaBar, DeltaBar)    
 
