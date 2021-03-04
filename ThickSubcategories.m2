@@ -46,6 +46,7 @@ ghost = method( TypicalValue => ComplexMap );
 
 -- Creates a map with source X that is G-ghost in degrees <= n
 ghost(Complex,Complex,ZZ) := ComplexMap => (G,X,n) -> (
+    -- G needs to be a complex of projective modules
     -- Check that G and X are complexes over the same ring
     R := ring G;
     R2 := ring X;
@@ -53,19 +54,23 @@ ghost(Complex,Complex,ZZ) := ComplexMap => (G,X,n) -> (
     
     H := Hom(G,X);
     
-    -- Collect the generators of H: maps f_i: G[n_i] -> X
-    L := {};
-    for i from min H to n do (
+    -- Collect the generators of H in the form G[-i] -> X
+    generatorsInDegree := (i) -> (
         K := ker H.dd_i;
         Q := cover K;
         -- induced module map Q -> H_i
         h := inducedMap(H_i,K)*map(K,Q,id_Q);
-        for j from 0 to rank Q-1 do (
-            -- complex map R^1[-i] -> H picking out the jth generator in degree i
-            g := map(H,(complex R^1)[-i],k -> if k==i then map(H_i,R^1,h*(id_Q)_{j}));
-            L = append(L,map(X,G[-i],(map(X[i],G,homomorphism g,Degree => 0)[-i])));
-        );
+        
+        -- get R^[-i] -> H from the jth component of Q
+        pickGenerator := (j) ->  map(H,(complex R^1)[-i],k -> if k==i then map(H_i,R^1,h*(id_Q)_{j}));
+        -- from R^1[-i] -> H get G[-i] -> X
+        generatorToMorphism := (f) -> map(X,G[-i],(homomorphism f)[-i],Degree => 0);
+        
+        apply(toList(0..(rank Q-1)),j -> generatorToMorphism(pickGenerator j))
     );
+    
+    L := flatten apply(toList((min H)..n),generatorsInDegree);
+    
     f := fold((a,b) -> a | b,L);
     canonicalMap(cone(f),X)
 )
@@ -79,8 +84,9 @@ ghost(Complex,ZZ) := ComplexMap => (X,n) -> (
     R := ring X;
     
     -- Construct the R-approximation of X
-    Q := complex R^0;
-    for i from min X to n do Q = Q ++ complex(cover ker X.dd_i)[-i];
+    Q := fold((a,b) -> a ++ b,complex R^0,apply(toList((min X)..n),i -> complex(cover ker X.dd_i)[-i]));
+--     Q := complex R^0;
+--     for i from min X to n do Q = Q ++ complex(cover ker X.dd_i)[-i];
     
     -- Construct map Q -> X
     fun := i -> if (i >= min X or i <= n) then inducedMap(X_i,ker X.dd_i)*map(ker X.dd_i,Q_i,id_(Q_i)) else map(R^0,X_i);
@@ -107,19 +113,23 @@ coghost(Complex,Complex) := ComplexMap => (G,X) -> (
     
     H := Hom(X,G);
     
-    -- Collect the generators of H: maps f_i: X -> G[n_i]
-    L := {};
-    for i from min H to max H do (
+    -- Collect the generators of H of the form X -> G[i]
+    generatorsInDegree := (i) -> (
         K := ker H.dd_i;
         Q := cover K;
         -- induced module map Q -> H_i
         h := inducedMap(H_i,K)*map(K,Q,id_Q);
-        for j from 0 to rank Q-1 do (
-            -- complex map R^1[-i] -> H picking out the jth generator in degree i
-            g := map(H,(complex R^1)[-i],k -> if k==i then map(H_i,R^1,h*(id_Q)_{j}));
-            L = append(L,map(G[i],X,homomorphism g,Degree => 0));
-        );
+        
+        -- get R^[-i] -> H from the jth component of Q
+        pickGenerator := (j) ->  map(H,(complex R^1)[-i],k -> if k==i then map(H_i,R^1,h*(id_Q)_{j}));
+        -- from R^1[-i] -> H get X -> G[i]
+        generatorToMorphism := (f) -> map(G[i],X,(homomorphism f),Degree => 0);
+        
+        apply(toList(0..(rank Q-1)),j -> generatorToMorphism(pickGenerator j))
     );
+    
+    L := flatten apply(toList((min H)..(max H)),generatorsInDegree);
+    
     f := fold((a,b) -> a || b,L);
     canonicalMap(X[-1],cone(f))[1]
 )
