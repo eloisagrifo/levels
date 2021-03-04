@@ -575,7 +575,7 @@ loadPackage "ThickSubcategories"
 uninstallPackage "ThickSubcategories"
 uninstallPackage "Complexes"
 restart
-path=append(path,"~/Documents/Github/levels");
+
 needsPackage "Complexes"
 needsPackage "CompleteIntersectionResolutions"
 k = QQ
@@ -588,9 +588,25 @@ path=append(path,"~/Documents/Github/levels");
 needsPackage "Complexes"
 needsPackage "CompleteIntersectionResolutions"
 needsPackage "ThickSubcategories"
-k = QQ
-R = k[x,y]/(x^2,y^2)
-M = complex(R^1/(x,y))
+
+uninstallPackage "ThickSubcategories"
+restart
+path=append(path,"~/Documents/Github/levels");
+installPackage "ThickSubcategories"
+needsPackage "Complexes"
+
+R = QQ[x,y]/(x^2,y^2)
+k = R^1/ideal"x,y"
+M = complex(R^1/(x) ++ R^1/(y))
+N = complex(k)
+time extKoszul(M,N)
+time Ext((R^1/(x)) ++ (R^1/(y)),k)
+
+M = complex({map(k,k^2,matrix{{1_R,1_R}})})
+
+N = complex({map(R^1 ++ k,R^2,matrix{{x,y},{0,0}})})
+M = N
+resolution N
 --extKoszul(complex(M),complex(M))
 --extKoszul = method();
 --extKoszul(Complex,Complex) := Module => (M,N) -> (
@@ -658,8 +674,6 @@ M = complex(R^1/(x,y))
      
      neg = n -> if n<0 then 0 else n;
      
-     
-     
       makematrix = (L,M) -> (
 	diag = sum L_0;
 	m = L_1;
@@ -689,24 +703,28 @@ M = complex(R^1/(x,y))
                  Degree => { -1, degreeLength A:0 });
 
     
-    --thing we are going to tensor with delta   
-    stuff = select(keys homotopies, o -> o_0 == apply(toList(1 .. c), i -> 0))
-    NotDeltaMaps = sum(apply(stuff, i -> toS(makematrix(i,homotopies#i))))
     
-    NotDelta = map( Cstar,
-                  Cstar, 
-                  NotDeltaMaps,
-                  Degree => { -1, degreeLength A:0 });
-    
-    DeltaBar = id_Cstar ** NotDelta + Delta ** id_Cstar
     
     Mdelta = apply(toList((min M) .. (max M)), i -> M.dd_i)
     
+    Mmods = apply(toList((min M) .. (max M)), i -> tensor(S,toS,restrict(M_i,A)))
     
+    Mmatrix = apply(Mdelta, f -> tensor(S,toS,restrict(f,A)))
+    
+    Msize = apply(Mmods,numgens)  
+    
+    Mtable = table(#Mmatrix,#Mmatrix, 
+	(p,q) -> if (p == (q-1)) then Mmatrix_(p+1) else (n = Msize_p; map(S^n,S^n,0)))
+    
+    GiantDelta = fold((a,b) -> a || b,apply(Mtable, w -> fold((a,b) -> a | b, w)))
+    
+    alltheMs = fold((a,b) -> a ++ b,Mmods)  
+       
+    RealDelta = map(alltheMs,alltheMs,GiantDelta)
+    
+    DeltaBar = id_Cstar ** RealDelta + Delta ** id_alltheMs;
 
-    homology(DeltaBar, DeltaBar)    
-
-    homology(Delta ** NotDelta, Delta ** NotDelta)--not right
+    prune homology(DeltaBar, DeltaBar)
     
     --each entry of forDelta (in order) and multiply by
     -- whatever the correct substitute for
@@ -758,6 +776,246 @@ Cstar
 
 
 
+
+
+
+
+
+
+
+
+
+--thing we are going to tensor with delta   
+    stuff = select(keys homotopies, o -> o_0 == apply(toList(1 .. c), i -> 0))
+    NotDeltaMaps = sum(apply(stuff, i -> toS(makematrix(i,homotopies#i))))
+    
+    NotDelta = map( Cstar,
+                  Cstar, 
+                  NotDeltaMaps,
+                  Degree => { -1, degreeLength A:0 });
+    
+
+
+
+
+--This is the actual working thing
+
+    B = ring M;
+--    if B != ring(N) then error "need modules over the same ring";
+    if not isCommutative B
+    then error "'Ext' not implemented yet for noncommutative rings.";
+    if not isHomogeneous B
+    then error "'Ext' received modules over an inhomogeneous ring";
+    if ((not isHomogeneous M) or (not isHomogeneous N))
+    then error "received an inhomogeneous module";
+    
+    --this needs to be fixed later -- answer over the wrong ring
+    if M == 0 then return B^0;
+    if N == 0 then return B^0;
+    
+    p = presentation B;
+    A = ring p;
+    I = ideal mingens ideal p;
+    n = numgens A;
+    c = numgens I;
+    f = apply(c, i -> I_i);
+    
+    M' = restrict(M ** B,A);
+    assert isHomogeneous M'; -- is this necessary, that is is there a way that the construction could give a non-homogeneous module?
+    
+--    N := coker(vars B);
+--    pN := lift(presentation N,A);
+--    N' := cokernel ( pN | p ** id_(target pN) );
+    
+    C = resolution(M');
+    
+    -- Construct ring of cohomological operators
+    K = coefficientRing A;
+    X = getSymbol "X";
+    S = K[ X_1 .. X_c, toSequence gens A,
+           Degrees => { apply(0 .. c-1, i -> prepend(-2, - degree f_i)),
+                        apply(0 .. n-1, j -> prepend( 0,   degree A_j))},
+           Heft => {-2,1} ];
+    
+    -- make a monoid whose monomials can be used as indices
+    Rmon = monoid [X_1 .. X_c,Degrees=>{c:{2}}];
+    -- make group ring, so 'basis' can enumerate the monomials
+    R = K Rmon;
+    
+    C = chainComplex(C);
+    homotopies = makeHomotopies(matrix{f},C);
+    -- Problem: All of this happens over the wrong ring, should be over R, but happens over A (they are isomorphic). Is this a problem? Might conflict later with S.
+    -- The entries of the hash table are indexed by {J,i} (different than before)
+    
+    -- keys does different things for Complex and ChainComplex. This is just about getting all the degrees where C is defined.
+    spots = C -> sort select(keys C, i -> class i === ZZ);
+    Cstar = S^(apply(spots C,i -> toSequence apply(degrees C_i, d -> prepend(i,d))))
+    -- assemble the matrix from its blocks.
+    -- We omit the sign (-1)^(n+1) which would ordinarily be used,
+    -- which does not affect the homology.
+    toS = map(S,A,apply(toList(c .. c+n-1), i -> S_i),DegreeMap => prepend_0);
+    
+    pow = o -> product toList(apply(pairs o, i -> S_(i_0)^(i_1)))
+    
+    r = rank Cstar;
+ 
+     
+     firanks = apply(toList(min(C) .. max(C)), o -> rank(C_o))
+     
+     neg = n -> if n<0 then 0 else n;
+     
+      makematrix = (L,M) -> (
+	diag = sum L_0;
+	m = L_1;
+	
+	topleftrow = sum take(firanks, neg(m+2*diag - 1 - min C));
+	topleftcolumn = sum take(firanks, neg(m - min C));
+	
+	rows = numRows M;
+	columns = numColumns M;
+	
+	R := ring M;
+	bigMatrix = matrix table(r,r, (p,q) -> (
+	if (
+	    (p >= topleftrow) and (p < (topleftrow + rows)) and 
+	    (q >= topleftcolumn) and (q < (topleftcolumn + columns))
+	    )
+	then M_(p-topleftrow,q-topleftcolumn) else 0));
+    promote(bigMatrix,R)
+)  
+    
+    
+    mapsfromhomotopies = sum(apply(keys homotopies, i -> pow(i_0)*toS(makematrix(i,homotopies#i))))
+    
+    Delta = map( Cstar,
+                 Cstar, 
+                 transpose mapsfromhomotopies,
+                 Degree => { -1, degreeLength A:0 });
+
+    
+    
+    
+    Mdelta = apply(toList((min M) .. (max M)), i -> M.dd_i)
+    
+    Mmods = apply(toList((min M) .. (max M)), i -> tensor(S,toS,restrict(M_i,A)))
+    
+    Mmatrix = apply(Mdelta, f -> tensor(S,toS,restrict(f,A)))
+    
+    Msize = apply(Mmods,numgens)  
+    
+    Mtable = table(#Mmatrix,#Mmatrix, 
+	(p,q) -> if (p == (q-1)) then Mmatrix_(p+1) else (n = Msize_p; map(S^n,S^n,0)))
+    
+    GiantDelta = fold((a,b) -> a || b,apply(Mtable, w -> fold((a,b) -> a | b, w)))
+    
+    alltheMs = fold((a,b) -> a ++ b,Mmods)  
+       
+    RealDelta = map(alltheMs,alltheMs,GiantDelta)
+    
+    DeltaBar = id_Cstar ** RealDelta + Delta ** id_alltheMs;
+
+    prune homology(DeltaBar, DeltaBar)
+
+
+
+
+
+extKoszul = method();
+extKoszul(Complex,Complex) := Module => (M,N) -> (
+    B = ring M;
+    if B != ring(N) then error "need modules over the same ring";
+    if not isCommutative B
+    then error "'Ext' not implemented yet for noncommutative rings.";
+    if not isHomogeneous B
+    then error "'Ext' received modules over an inhomogeneous ring";
+    if ((not isHomogeneous M) or (not isHomogeneous N))
+    then error "received an inhomogeneous complex";
+    
+    --this needs to be fixed later -- answer over the wrong ring
+    if M == 0 then return B^0;
+    if N == 0 then return B^0;
+    
+    p := presentation B;
+    A := ring p;
+    I := ideal mingens ideal p;
+    n := numgens A;
+    c := numgens I;
+    f := apply(c, i -> I_i);
+    
+    M' := restrict(M ** B,A);
+    assert isHomogeneous M'; -- is this necessary, that is is there a way that the construction could give a non-homogeneous module?
+    
+    C := resolution(M');
+    
+    -- Construct ring of cohomological operators
+    K := coefficientRing A;
+    X := getSymbol "X";
+    S := K[ X_1 .. X_c, toSequence gens A,
+           Degrees => { apply(0 .. c-1, i -> prepend(-2, - degree f_i)),
+                        apply(0 .. n-1, j -> prepend( 0,   degree A_j))},
+           Heft => {-2,1} ];
+    
+    C := chainComplex(C);
+    homotopies := makeHomotopies(matrix{f},C);
+    -- Problem: All of this happens over the wrong ring, should be over R, but happens over A (they are isomorphic). Is this a problem? Might conflict later with S.
+    -- The entries of the hash table are indexed by {J,i} (different than before)
+    
+    -- keys does different things for Complex and ChainComplex. This is just about getting all the degrees where C is defined.
+    spots := C -> sort select(keys C, i -> class i === ZZ);
+    Cstar := S^(apply(spots C,i -> toSequence apply(degrees C_i, d -> prepend(i,d))))
+    -- assemble the matrix from its blocks.
+    -- We omit the sign (-1)^(n+1) which would ordinarily be used,
+    -- which does not affect the homology.
+    toS := map(S,A,apply(toList(c .. c+n-1), i -> S_i),DegreeMap => prepend_0);
+    
+    pow := o -> product toList(apply(pairs o, i -> S_(i_0)^(i_1)));
+    
+    r := rank Cstar;
+    firanks := apply(toList(min(C) .. max(C)), o -> rank(C_o));
+    neg := n -> if n<0 then 0 else n;
+    makematrix := (L,M) -> (
+	diag := sum L_0;
+	m := L_1;
+	topleftrow := sum take(firanks, neg(m+2*diag - 1 - min C));
+	topleftcolumn := sum take(firanks, neg(m - min C));
+	rows := numRows M;
+	columns := numColumns M;
+	R := ring M;
+	
+	bigMatrix := matrix table(r,r, (p,q) -> (
+	if (
+	    (p >= topleftrow) and (p < (topleftrow + rows)) and 
+	    (q >= topleftcolumn) and (q < (topleftcolumn + columns))
+	    ) then 
+	M_(p-topleftrow,q-topleftcolumn) else 0)); 
+promote(bigMatrix,R)
+);
+        
+    mapsfromhomotopies := sum(apply(keys homotopies, i -> pow(i_0)*toS(makematrix(i,homotopies#i))));
+    
+    Delta := map( Cstar,
+                 Cstar, 
+                 transpose mapsfromhomotopies,
+                 Degree => { -1, degreeLength A:0 });
+
+    Ndelta := apply(toList((min N) .. (max N)), i -> N.dd_i);
+    Nmods := apply(toList((min N) .. (max N)), i -> tensor(S,toS,restrict(N_i,A)));
+    Nmatrix := apply(Ndelta, f -> tensor(S,toS,restrict(f,A)));
+    Nsize := apply(Nmods,numgens);
+    Ntable := table(#Nmatrix,#Nmatrix, 
+	(p,q) -> if (p == (q-1)) then Nmatrix_(p+1) else (n = Nsize_p; map(S^n,S^n,0)));
+    
+    GiantDelta := fold((a,b) -> a || b,apply(Ntable, w -> fold((a,b) -> a | b, w)));
+
+    alltheNs := fold((a,b) -> a ++ b,Nmods);
+    
+    RealDelta := map(alltheNs,alltheNs,GiantDelta);
+    
+    DeltaBar := id_Cstar ** RealDelta + Delta ** id_alltheNs;
+
+    prune homology(DeltaBar, DeltaBar)
+    )
+    
 
 
 
