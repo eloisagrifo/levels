@@ -1020,8 +1020,96 @@ promote(bigMatrix,R)
 
 
 
+restart
+path = append(path, "~/Documents/GitHub/levels");
+needsPackage "ThickSubcategories";
+needsPackage "Complexes"
+needsPackage "CompleteIntersectionResolutions"
+R = QQ[x,y]/ideal"x2,xy"
+M = complex koszul(matrix{{x,y}})
+N = M
 
+--extKoszul(Complex,Complex) = Module => (M,N) -> (
+    B = ring M
+    
+    p = presentation B
+    A = ring p
+    I = trim ideal p
+    n = numgens A
+    c = numgens I
+    f = apply(c, i -> I_i)
+    
+    M' = restrict(M ** B,A)
+    assert isHomogeneous M'
+    
+    -- Construct ring of cohomological operators (over field)
+    K = coefficientRing A
+    X = getSymbol "X"
+    S = K[ X_1 .. X_c, toSequence gens A,
+           Degrees => { apply(0 .. c-1, i -> prepend(-2, - degree f_i)),
+                        apply(0 .. n-1, j -> prepend( 0,   degree A_j))},
+           Heft => {-2,1} ]
+    
+    if (M == 0 or N == 0) then return S^0
+    
+    C = chainComplex resolution(M')
+    -- keys: {J,i} where J a list of integers of length c
+    homotopies = makeHomotopies(matrix{f},C)
+    
+    -- Construct Cstar = (S \otimes_A C)^\natural
+    spots = C -> sort select(keys C, i -> class i === ZZ)
+    Cstar = S^(apply(spots C,i -> toSequence apply(degrees C_i, d -> prepend(i,d))))
+    
+    -- Construct the (almost) differential Delta: Cstar -> Cstar[-1] that combines the homotopies and multiplication by X_i
+    -- We omit the sign (-1)^(n+1) which would ordinarily be used, which does not affect the homology.
+    toS = map(S,A,apply(toList(c .. c+n-1), i -> S_i),DegreeMap => prepend_0)
+    -- Return X^n for a list of integers n
+    pow = o -> product toList(apply(pairs o, i -> S_(i_0)^(i_1)))
+    
+    -- Assemble the matrix from its blocks.
+    r = rank Cstar
+    firanks = apply(toList(min(C) .. max(C)), o -> rank(C_o))
+    neg = n -> if n<0 then 0 else n
+    makematrix = (L,M) -> (
+        diag := sum L_0;
+        m := L_1;
+        topleftrow := sum take(firanks, neg(m+2*diag - 1 - min C));
+        topleftcolumn := sum take(firanks, neg(m - min C));
+        rows := numRows M;
+        columns := numColumns M;
+        R := ring M;
+        
+        bigMatrix := matrix table(r,r, (p,q) -> (
+            if (
+                (p >= topleftrow) and (p < (topleftrow + rows)) and 
+                (q >= topleftcolumn) and (q < (topleftcolumn + columns))
+            ) then 
+            M_(p-topleftrow,q-topleftcolumn) else 0)); 
+        
+        promote(bigMatrix,R)
+    );
+    
+    mapsfromhomotopies = sum(apply(keys homotopies, i -> pow(i_0)*toS(makematrix(i,homotopies#i))))
+    
+    Delta = map( Cstar,
+                 Cstar, 
+                 transpose mapsfromhomotopies,
+                 Degree => { -1, degreeLength A:0 })
 
+    Ndelta = apply(toList((min N) .. (max N)), i -> N.dd_i)
+    Nmods = apply(toList((min N) .. (max N)), i -> tensor(S,toS,restrict(N_i,A)))
+    Nmatrix = apply(Ndelta, f -> tensor(S,toS,restrict(f,A)))
+    Nsize = apply(Nmods,numgens)
+    Ntable = table(#Nmatrix,#Nmatrix, 
+	(p,q) -> if (p == (q-1)) then Nmatrix_(p+1) else (n = Nsize_p; m = Nsize_q; map(S^n,S^m,0)))
+    
+    GiantDelta = fold((a,b) -> a || b, apply(Ntable, w -> fold((a,b) -> a | b, w)))
 
+    alltheNs = fold((a,b) -> a ++ b,Nmods);
+    
+    RealDelta := map(alltheNs,alltheNs,GiantDelta);
+    
+    DeltaBar := id_Cstar ** RealDelta + Delta ** id_alltheNs;
 
-
+    prune homology(DeltaBar, DeltaBar)
+)

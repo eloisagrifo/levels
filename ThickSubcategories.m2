@@ -272,32 +272,26 @@ supportVariety(Module) := Ideal => (M) -> (
 ---------------------------------------------------------------
 isBuilt = method( TypicalValue => Boolean );
 
-isBuilt(Complex,Complex) := Boolean -> (X,Y) -> (
+isBuilt(Complex,Complex) := Boolean => (X,Y) -> (
+    
     if not(ring X === ring Y) then return "expected complexes over the same ring";
     
-    if not(isSubset(ann Y, radical ann X)) then return false;
-    
-    E1 := extKoszul(X);
-    E2 := extKoszul(Y);
+    E1 := extKoszul(X,X);
+    E2 := extKoszul(Y,Y);
     S1 := ring E1;
     S2 := ring E2;
     iso := map(S2,S1, gens S2);
     E1 = tensor(S2,iso,E1);
-    isSubset(ann E2, radical ann E1)
+    isSubset(ann E2, radical ann E1) --Warning: when true, may or may not be true
 )
 
-isBuilt(Module,Module) := Boolean -> (M,N) -> (
+isBuilt(Module,Module) := Boolean => (M,N) -> (
+    
     if not(ring M === ring N) then return "expected modules over the same ring";
     
     if not(isSubset(ann N, radical ann M)) then return false;
     
-    E1 := extKoszul(M);
-    E2 := extKoszul(N);
-    S1 := ring E1;
-    S2 := ring E2;
-    iso := map(S2,S1, gens S2);
-    E1 = tensor(S2,iso,E1);
-    isSubset(ann E2, radical ann E1)
+    isBuilt(complex M, complex N)
 )
 
 
@@ -532,7 +526,7 @@ extKoszul(Complex,Complex) := Module => (M,N) -> (
     Nmatrix := apply(Ndelta, f -> tensor(S,toS,restrict(f,A)));
     Nsize := apply(Nmods,numgens);
     Ntable := table(#Nmatrix,#Nmatrix, 
-	(p,q) -> if (p == (q-1)) then Nmatrix_(p+1) else (n = Nsize_p; map(S^n,S^n,0)));
+	(p,q) -> if (p == (q-1)) then Nmatrix_(p+1) else map(S^(Nsize_p),S^(Nsize_q),0));
     
     GiantDelta := fold((a,b) -> a || b,apply(Ntable, w -> fold((a,b) -> a | b, w)));
 
@@ -965,7 +959,7 @@ doc ///
         N:Module
     Outputs
         :Boolean
-            ???
+            TODO
     Description
         Text
             TODO
