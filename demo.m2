@@ -45,6 +45,7 @@ M = complex(R^1/ideal"x")
 N = complex(R^1/ideal"y")
 time isBuilt(K,M)
 time isBuilt(K,N)
+
 --Both these modules M and N are NOT proxy small!
 --A module is virtually small iff it builds the koszul complex
 
