@@ -272,28 +272,49 @@ supportVariety(Module) := Ideal => (M) -> (
 ---------------------------------------------------------------
 isBuilt = method( TypicalValue => Boolean );
 
-isBuilt(Complex,Complex) := Boolean => (X,Y) -> (
+isBuilt(Complex,Complex) := Boolean => (X,G) -> (
+    if not(ring X === ring G) then return "expected complexes over the same ring";
     
-    if not(ring X === ring Y) then return "expected complexes over the same ring";
+    -- Check if the complexes are perfect
+    perfectX := isPerfect(X);
+    perfectG := isPerfect(G);
+    if (perfectG and not perfectX) then return false;
     
+    -- Check the support of the homologies over the ring
+    annH := (C) -> ( (lo,hi) := concentration C;
+                     intersect apply(apply(toList(lo..hi),n -> HH_n(C)),ann));
+    answerSuppH := isSubset(annH G ,radical annH X);
+    if not answerSuppH then (
+        return false;
+    ) else (
+        if (perfectG and perfectX) then return true;
+    );
+    
+    -- Check the support variety
     E1 := extKoszul(X,X);
-    E2 := extKoszul(Y,Y);
+    E2 := extKoszul(G,G);
     S1 := ring E1;
     S2 := ring E2;
     iso := map(S2,S1, gens S2);
     E1 = tensor(S2,iso,E1);
-    isSubset(ann E2, radical ann E1) --Warning: when true, may or may not be true
+    -- If the subset contain each other, print a warning.
+    answerSuppVar := isSubset(ann E2, radical ann E1);
+    if not answerSuppVar then return false;
+    print "Warning: Need not be correct if the ring is not ci";
+    return true;
 )
 
 isBuilt(Module,Module) := Boolean => (M,N) -> (
-    
-    if not(ring M === ring N) then return "expected modules over the same ring";
-    
-    if not(isSubset(ann N, radical ann M)) then return false;
-    
     isBuilt(complex M, complex N)
 )
 
+isBuilt(Complex,Module) := Boolean => (X,N) -> (
+    isBuilt(X,complex N)
+)
+
+isBuilt(Module,Complex) := Boolean => (M,G) -> (
+    isBuilt(complex M,G)
+)
 
 ---------------------------------------------------------------
 -- restriction of scalars
@@ -746,10 +767,14 @@ doc ///
         level(X)
         level(G,X)
         level(M)
+        level(N,M)
+        level(N,X)
+        level(G,M)
     Inputs
         X:Complex
         G:Complex -- if no G is provided, G is assumed to be the underlying ring
         M:Module -- M is replaced with the corresponding complex
+        N:Module -- N is replaced with the corresponding complex
     Outputs
         :ZZ
             the level of X with respect to G
@@ -779,7 +804,7 @@ doc ///
             N = R^1/ideal(x^4)
             level(M,N)
     Caveat
-        Level only returns the correct answer if both arguments are perfect.
+        Only returns the correct answer if both arguments are perfect.
     SeeAlso
         ghost
         coghost
@@ -936,7 +961,7 @@ doc ///
         M:Module
     Outputs
         :Ideal
-            ???
+            The ideal whose vanishing set is the support variety.
     Description
         Text
             TODO
@@ -947,22 +972,37 @@ doc ///
         isBuilt
         (isBuilt, Complex, Complex)
         (isBuilt, Module, Module)
+        (isBuilt, Module, Complex)
+        (isBuilt, Complex, Module)
     Headline
-        determines whether one complex builds the other
+        determines whether the first copmlex is built by the second
     Usage
         isPerfect(X,Y)
         isPerfect(M,N)
+        isPerfect(M,Y)
+        isPerfect(X,N)
     Inputs
         X:Complex
         Y:Complex
-        M:Module
-        N:Module
+        M:Module -- M is replaced with the corresponding complex
+        N:Module -- N is replaced with the corresponding complex
     Outputs
         :Boolean
-            TODO
+            true if Y is built by X, and false if not
     Description
-        Text
-            TODO
+        Example
+            needsPackage "Complexes";
+            R = QQ[x,y]/ideal(x^3,x*2*y);
+            X = complex koszul matrix{{x^2,x*y}}
+            Y = complex koszul matrix{{x,y}}
+            isBuilt(X,Y)
+            isBuilt(Y,X)
+    Caveat
+        When the method returns {\tt true}, $X$ need not be built by $Y$. In the following cases {\tt true} is correct:
+        
+        - The ring is complete intersection, or
+        
+        - Y is perfect.
 ///
 
 doc ///
