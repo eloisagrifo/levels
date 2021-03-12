@@ -291,8 +291,13 @@ isBuilt(Complex,Complex) := Boolean => (X,G) -> (
     );
     
     -- Check the support variety
-    E1 := extKoszul(X,X);
-    E2 := extKoszul(G,G);
+    -- for now against the residue field
+    R := ring X;
+    k := complex(R^1/ideal vars R);
+    E1 := extKoszul(X,k);
+    E2 := extKoszul(G,k);
+--     E1 := extKoszul(X,X);
+--     E2 := extKoszul(G,G);
     S1 := ring E1;
     S2 := ring E2;
     iso := map(S2,S1, gens S2);
@@ -499,43 +504,45 @@ extKoszul(Complex,Complex) := Module => (M,N) -> (
     if (M == 0 or N == 0) then return S^0;
     
     C := chainComplex resolution(M');
-    -- keys: {J,i} where J a list of integers of length c
+    -- keys: {J,d} where J a list of integers of length c and d the degree of the source in C
     homotopies := makeHomotopies(matrix{f},C);
     
     -- Construct Cstar = (S \otimes_A C)^\natural
-    spots := C -> sort select(keys C, i -> class i === ZZ);
-    Cstar := S^(apply(spots C,i -> toSequence apply(degrees C_i, d -> prepend(i,d))));
+    degreesC := sort select(keys C, i -> class i === ZZ);
+    Cstar := S^(apply(degreesC,i -> toSequence apply(degrees C_i, d -> prepend(i,d))));
     
     -- Construct the (almost) differential Delta: Cstar -> Cstar[-1] that combines the homotopies and multiplication by X_i
     -- We omit the sign (-1)^(n+1) which would ordinarily be used, which does not affect the homology.
-    toS := map(S,A,apply(toList(c .. c+n-1), i -> S_i),DegreeMap => prepend_0);
-    -- Return X^n for a list of integers n
-    pow := o -> product toList(apply(pairs o, i -> S_(i_0)^(i_1)));
     
-    -- Assemble the matrix from its blocks.
+    -- Return X^n = X_0^{n_0} *...* X_(c-1)^{n_{c-1}} for a list of integers n
+    prodX := o -> product toList(apply(pairs o, i -> S_(i_0)^(i_1)));
+    
+    -- Create a matrix for each entry of homotopies
     r := rank Cstar;
-    firanks := apply(toList(min(C) .. max(C)), o -> rank(C_o));
-    neg := n -> if n<0 then 0 else n;
+    firanks := apply(degreesC, o -> rank(C_o));
     makematrix := (L,M) -> (
+        -- L a list {gamma,d} where gamma a list of integers of length c and d a degree of C
+        -- M a matrix
         diag := sum L_0;
         m := L_1;
-        topleftrow := sum take(firanks, neg(m+2*diag - 1 - min C));
-        topleftcolumn := sum take(firanks, neg(m - min C));
+        topleftrow := sum take(firanks, m+2*diag - 1 - min C);
+        topleftcolumn := sum take(firanks, m - min C);
         rows := numRows M;
         columns := numColumns M;
-        R := ring M;
         
-        bigMatrix := matrix table(r,r, (p,q) -> (
+        matrix table(r,r, (p,q) -> (
             if (
                 (p >= topleftrow) and (p < (topleftrow + rows)) and 
                 (q >= topleftcolumn) and (q < (topleftcolumn + columns))
             ) then 
-            M_(p-topleftrow,q-topleftcolumn) else 0)); 
-        
-        promote(bigMatrix,R)
+                M_(p-topleftrow,q-topleftcolumn) else 0
+            )
+        )
     );
     
-    mapsfromhomotopies := sum(apply(keys homotopies, i -> pow(i_0)*toS(makematrix(i,homotopies#i))));
+    toS := map(S,A,apply(toList(c .. c+n-1), i -> S_i),DegreeMap => prepend_0);
+    
+    mapsfromhomotopies := sum(apply(select(keys homotopies, i -> homotopies#i != 0), i -> prodX(i_0)*toS(makematrix(i,homotopies#i))));
     
     Delta := map( Cstar,
                  Cstar, 
