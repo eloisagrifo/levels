@@ -500,6 +500,8 @@ extKoszul(Complex,Complex) := Module => (M,N) -> (
            Degrees => { apply(0 .. c-1, i -> prepend(-2, - degree f_i)),
                         apply(0 .. n-1, j -> prepend( 0,   degree A_j))},
            Heft => {-2,1} ];
+    -- Natural inclusion A -> S
+    toS := map(S,A,apply(toList(c .. c+n-1), i -> S_i),DegreeMap => prepend_0);
     
     if (M == 0 or N == 0) then return S^0;
     
@@ -508,7 +510,8 @@ extKoszul(Complex,Complex) := Module => (M,N) -> (
     homotopies := makeHomotopies(matrix{f},C);
     
     -- Construct Cstar = (S \otimes_A C)^\natural
-    degreesC := sort select(keys C, i -> class i === ZZ);
+    degreesC := toList(min(C)..max(C));
+    -- TODO: problem of this vs min(C)..max(C), for the second not all objects need to be defined, but is necessary for 
     Cstar := S^(apply(degreesC,i -> toSequence apply(degrees C_i, d -> prepend(i,d))));
     
     -- Construct the (almost) differential Delta: Cstar -> Cstar[-1] that combines the homotopies and multiplication by X_i
@@ -519,42 +522,38 @@ extKoszul(Complex,Complex) := Module => (M,N) -> (
     
     -- Create a matrix for each entry of homotopies
     r := rank Cstar;
-    firanks := apply(degreesC, o -> rank(C_o));
+    ranksC := apply(degreesC, o -> rank(C_o));
     makematrix := (L,M) -> (
         -- L a list {gamma,d} where gamma a list of integers of length c and d a degree of C
         -- M a matrix
-        diag := sum L_0;
-        m := L_1;
-        topleftrow := sum take(firanks, m+2*diag - 1 - min C);
-        topleftcolumn := sum take(firanks, m - min C);
-        rows := numRows M;
-        columns := numColumns M;
+        -- Find position to place M in
+        topleftrow := sum take(ranksC, L_1 + 2*(sum L_0) - 1 - min C);
+        topleftcolumn := sum take(ranksC, L_1 - min C);
         
+        -- TODO: use block matrix like for N below
         matrix table(r,r, (p,q) -> (
             if (
-                (p >= topleftrow) and (p < (topleftrow + rows)) and 
-                (q >= topleftcolumn) and (q < (topleftcolumn + columns))
+                (p >= topleftrow) and (p < (topleftrow + numRows M)) and 
+                (q >= topleftcolumn) and (q < (topleftcolumn + numColumns M))
             ) then 
                 M_(p-topleftrow,q-topleftcolumn) else 0
             )
         )
     );
     
-    toS := map(S,A,apply(toList(c .. c+n-1), i -> S_i),DegreeMap => prepend_0);
-    
     mapsfromhomotopies := sum(apply(select(keys homotopies, i -> homotopies#i != 0), i -> prodX(i_0)*toS(makematrix(i,homotopies#i))));
-    
     Delta := map( Cstar,
-                 Cstar, 
-                 transpose mapsfromhomotopies,
-                 Degree => { -1, degreeLength A:0 });
+                  Cstar, 
+                  transpose mapsfromhomotopies,
+                  Degree => { -1, degreeLength A:0 });
 
-    Ndelta := apply(toList((min N) .. (max N)), i -> N.dd_i);
-    Nmods := apply(toList((min N) .. (max N)), i -> tensor(S,toS,restrict(N_i,A)));
+    -- Rewrite N as a graded S-module D with a degree -1 map
+    degreesN := toList((min N) .. (max N));
+    Ndelta := apply(degreesN, i -> N.dd_i);
+    Nmods := apply(degreesN, i -> tensor(S,toS,restrict(N_i,A)));
     Nmatrix := apply(Ndelta, f -> tensor(S,toS,restrict(f,A)));
     Nsize := apply(Nmods,numgens);
-    Ntable := table(#Nmatrix,#Nmatrix, 
-	(p,q) -> if (p == (q-1)) then Nmatrix_(p+1) else map(S^(Nsize_p),S^(Nsize_q),0));
+    Ntable := table(#Nmatrix,#Nmatrix, (p,q) -> if (p == (q-1)) then Nmatrix_(p+1) else map(S^(Nsize_p),S^(Nsize_q),0));
     
     GiantDelta := fold((a,b) -> a || b,apply(Ntable, w -> fold((a,b) -> a | b, w)));
 
