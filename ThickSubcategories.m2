@@ -389,7 +389,7 @@ restrict(ModuleMap,Ring) := ModuleMap => (f,Q) -> (
     lG := complex({(Q^1/I) ** pN});
     
     -- create lifted/induced complex map g: lF -> lG only in degree 0
-    h := map(lG,lF,hashTable{0 => ((Q^1/I) ** lift(g_1,Q))});
+    h := map(lG,lF,hashTable{0 => map(lG_0,lF_0,(Q^1/I) ** lift(g_1,Q),Degree => degree g_1)});
         
     HH_0 h
 )
