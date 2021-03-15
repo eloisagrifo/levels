@@ -510,8 +510,8 @@ extKoszul(Complex,Complex) := Module => (M,N) -> (
     homotopies := makeHomotopies(matrix{f},C);
     
     -- Construct Cstar = (S \otimes_A C)^\natural
-    degreesC := toList(min(C)..max(C));
-    -- TODO: problem of this vs min(C)..max(C), for the second not all objects need to be defined, but is necessary for 
+    degreesC := sort select(keys C, i -> class i === ZZ);
+--     degreesC := toList(min(C)..max(C));
     Cstar := S^(apply(degreesC,i -> toSequence apply(degrees C_i, d -> prepend(i,d))));
     
     -- Construct the (almost) differential Delta: Cstar -> Cstar[-1] that combines the homotopies and multiplication by X_i
@@ -523,14 +523,21 @@ extKoszul(Complex,Complex) := Module => (M,N) -> (
     -- Create a matrix for each entry of homotopies
     r := rank Cstar;
     ranksC := apply(degreesC, o -> rank(C_o));
+    
+    matrixfromblocks := (M) -> fold((a,b) -> a || b,apply(M, w -> fold((a,b) -> a | b, w)));
     makematrix := (L,M) -> (
         -- L a list {gamma,d} where gamma a list of integers of length c and d a degree of C
         -- M a matrix
+        
+        -- Problem if there are undefined degrees between minC and maxC
+--         blockmatrix = table( #degreesC,
+--                              #degreesC, 
+--                              (p,q) -> if (p == L_1 + 2*(sum L_0) - 1 - min C) and (q == L_1 - min C) then M else map(A^(ranksC#p),A^(ranksC#q),0));
+--         matrixfromblocks blockmatrix
+        
         -- Find position to place M in
         topleftrow := sum take(ranksC, L_1 + 2*(sum L_0) - 1 - min C);
         topleftcolumn := sum take(ranksC, L_1 - min C);
-        
-        -- TODO: use block matrix like for N below
         matrix table(r,r, (p,q) -> (
             if (
                 (p >= topleftrow) and (p < (topleftrow + numRows M)) and 
@@ -541,10 +548,10 @@ extKoszul(Complex,Complex) := Module => (M,N) -> (
         )
     );
     
-    mapsfromhomotopies := sum(apply(select(keys homotopies, i -> homotopies#i != 0), i -> prodX(i_0)*toS(makematrix(i,homotopies#i))));
-    Delta := map( Cstar,
+    DeltaCmatrix := sum(apply(select(keys homotopies, i -> homotopies#i != 0), i -> prodX(i_0)*toS(makematrix(i,homotopies#i))));
+    DeltaC := map( Cstar,
                   Cstar, 
-                  transpose mapsfromhomotopies,
+                  transpose DeltaCmatrix,
                   Degree => { -1, degreeLength A:0 });
 
     -- Rewrite N as a graded S-module D with a degree -1 map
@@ -555,13 +562,13 @@ extKoszul(Complex,Complex) := Module => (M,N) -> (
     Nsize := apply(Nmods,numgens);
     Ntable := table(#Nmatrix,#Nmatrix, (p,q) -> if (p == (q-1)) then Nmatrix_(p+1) else map(S^(Nsize_p),S^(Nsize_q),0));
     
-    GiantDelta := fold((a,b) -> a || b,apply(Ntable, w -> fold((a,b) -> a | b, w)));
-
-    alltheNs := fold((a,b) -> a ++ b,Nmods);
+    DeltaNmatrix := matrixfromblocks Ntable;
+    Ngraded := fold((a,b) -> a ++ b,Nmods);
+    DeltaN := map(Ngraded,Ngraded,DeltaNmatrix);
     
-    RealDelta := map(alltheNs,alltheNs,GiantDelta);
-    
-    DeltaBar := id_Cstar ** RealDelta + Delta ** id_alltheNs;
+    DeltaBar := id_Cstar ** DeltaN + DeltaC ** id_Ngraded;
+    -- Not: DeltaBar * DeltaBar = 0
+    -- Off by some signs! Replace id_Cstar by some signs depending on the degree
 
     prune homology(DeltaBar, DeltaBar)
 )
