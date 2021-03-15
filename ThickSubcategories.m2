@@ -477,7 +477,7 @@ extKoszul(Complex,Complex) := Module => (M,N) -> (
     B := ring M;
     if not(B === ring(N)) then error "expected complexes over the same ring";
     if not isCommutative B
-    then error "'Ext' not implemented yet for noncommutative rings.";
+    then error "'Ext' not implemented yet for noncommutative rings";
     if not isHomogeneous B
     then error "'Ext' received modules over an inhomogeneous ring";
     if ((not isHomogeneous M) or (not isHomogeneous N))
@@ -490,7 +490,8 @@ extKoszul(Complex,Complex) := Module => (M,N) -> (
     c := numgens I;
     f := apply(c, i -> I_i);
     
-    M' := restrict(M ** B,A);
+--     M' := restrict(M ** B,A); -- not homogeneous
+    M' := restrict(M,A); -- homogeneous
     assert isHomogeneous M'; -- is this necessary, that is is there a way that the construction could give a non-homogeneous module?
     
     -- Construct ring of cohomological operators (over field)
