@@ -566,9 +566,11 @@ extKoszul(Complex,Complex) := Module => (M,N) -> (
     Ngraded := fold((a,b) -> a ++ b,Nmods);
     DeltaN := map(Ngraded,Ngraded,DeltaNmatrix);
     
-    DeltaBar := id_Cstar ** DeltaN + DeltaC ** id_Ngraded;
-    -- Not: DeltaBar * DeltaBar = 0
-    -- Off by some signs! Replace id_Cstar by some signs depending on the degree
+    SignIdCstar := diagonalMatrix flatten toList apply(pairs(ranksC), w -> if even(w_0) then apply(toList(1 .. w_1), o -> -1) else apply(toList(1 .. w_1), o -> 1));
+
+    SignIdCstar = promote(SignIdCstar, S); 
+    
+    DeltaBar := SignIdCstar ** DeltaN + DeltaC ** id_Ngraded;
 
     prune homology(DeltaBar, DeltaBar)
 )
