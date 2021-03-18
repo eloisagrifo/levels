@@ -256,7 +256,7 @@ isPerfect(Module) := Boolean => (M) -> (
 supportVariety = method( TypicalValue => Ideal );
 
 supportVariety(Complex) := Ideal => (X) -> (
-    R := ring ;
+    R := ring X;
     k := R^1/ideal vars R;
     E := extKoszul(X,X);
     S := ring E;
@@ -427,7 +427,7 @@ restrict(ModuleMap) := ModuleMap => (f) -> (
     lG := complex({(Q^1/I) ** pN});
     
     -- create lifted/induced complex map g: lF -> lG only in degree 0
-    h := map(lG,lF,hashTable{0 => ((Q^1/I) ** lift(g_1,Q))});
+    h := map(lG,lF,hashTable{0 => map(lG_0,lF_0,(Q^1/I) ** lift(g_1,Q),Degree => degree g_1)});
         
     HH_0 h
 )
@@ -490,7 +490,6 @@ extKoszul(Complex,Complex) := Module => (M,N) -> (
     c := numgens I;
     f := apply(c, i -> I_i);
     
---     M' := restrict(M ** B,A); -- not homogeneous
     M' := restrict(M,A); -- homogeneous
     assert isHomogeneous M'; -- is this necessary, that is is there a way that the construction could give a non-homogeneous module?
     
