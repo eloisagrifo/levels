@@ -1149,6 +1149,7 @@ time supportVariety(R^1)
 time supportVariety(R^1,FiniteLength => true)
 
 
+--something is wrong here!!!
 restart
 needsPackage "Complexes"
 needsPackage "ThickSubcategories";
