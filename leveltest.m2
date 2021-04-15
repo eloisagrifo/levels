@@ -1019,15 +1019,18 @@ promote(bigMatrix,R)
 
 
 
-
+uninstallPackage "ThickSubcategories"
 restart
 path = append(path, "~/Documents/GitHub/levels");
 needsPackage "ThickSubcategories";
 needsPackage "Complexes"
 needsPackage "CompleteIntersectionResolutions"
-R = QQ[x,y]/ideal"x2,xy"
-M = complex koszul(matrix{{x,y}})
-N = M
+R = QQ[x,y]/ideal"x2,y2"
+
+M = complex({map(R^1/ideal(x),R^1/ideal(x),matrix{{y}})})
+N = complex({map(R^1/ideal(y),R^1/ideal(y),matrix{{x}})})
+
+
 
 --extKoszul(Complex,Complex) = Module => (M,N) -> (
     B = ring M
@@ -1107,9 +1110,61 @@ N = M
 
     alltheNs = fold((a,b) -> a ++ b,Nmods);
     
-    RealDelta := map(alltheNs,alltheNs,GiantDelta);
+    RealDelta = map(alltheNs,alltheNs,GiantDelta);
     
-    DeltaBar := id_Cstar ** RealDelta + Delta ** id_alltheNs;
+    SignId = diagonalMatrix flatten toList apply(pairs(firanks), w -> if even(w_0) then 
+	apply(toList(1 .. w_1), o -> -1) else apply(toList(1 .. w_1), o -> 1));
+    
+    SignId = promote(SignId, S);
+        
+    DeltaBar = SignId ** RealDelta + Delta ** id_alltheNs;
 
     prune homology(DeltaBar, DeltaBar)
 )
+
+
+
+
+uninstallPackage "ThickSubcategories"
+restart
+path = append(path, "~/Documents/GitHub/levels");
+installPackage "ThickSubcategories";
+
+needsPackage "Complexes"
+needsPackage "CompleteIntersectionResolutions"
+
+
+needsPackage "Complexes"
+needsPackage "ThickSubcategories";
+
+R = QQ[x,y]/ideal"xy,x2"
+X = complex koszul(matrix{{x,y}})
+time supportVariety(R^1/ideal"y")
+time supportVariety(R^1/ideal"x",FiniteLength => true)
+
+
+
+R = QQ[x,y]/ideal"xy,x2"
+time supportVariety(R^1)
+time supportVariety(R^1,FiniteLength => true)
+
+
+restart
+needsPackage "Complexes"
+needsPackage "ThickSubcategories";
+
+R = QQ[x,y,z,w]/ideal"x2,xy,yz,zw,w2"
+X = complex koszul matrix{{x,y,z,w}}
+time supportVariety(X)
+time supportVariety(X,FiniteLength => true)
+
+
+
+restart
+needsPackage "Complexes"
+needsPackage "ThickSubcategories";
+
+R = QQ[x,y]/ideal"xy,x2"
+X = complex koszul vars R
+time supportVariety(X)
+time supportVariety(X,FiniteLength => true)

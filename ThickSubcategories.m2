@@ -15,6 +15,7 @@ export {
     -- Options 
     "MaxLevelAttempts",
     "LengthLimitGenerator",
+    "FiniteLength",
     -- Methods
     "ghost",
     "coghost",
@@ -231,6 +232,9 @@ level(Complex,Module) := ZZ => opts -> (G,N) -> (
 isPerfect = method( TypicalValue => Boolean );
 
 isPerfect(Complex) := Boolean => (F) -> (
+    
+    
+    
     -- First make the ring and its residue field for the complex M
     R := ring F;
     m := ideal(vars R);
@@ -253,18 +257,23 @@ isPerfect(Module) := Boolean => (M) -> (
 ---------------------------------------------------------------
 -- Computes the support variety of a module
 ---------------------------------------------------------------
-supportVariety = method( TypicalValue => Ideal );
+supportVariety = method( TypicalValue => Ideal, Options => { FiniteLength => false } );
 
-supportVariety(Complex) := Ideal => (X) -> (
-    R := ring X;
-    k := R^1/ideal vars R;
-    E := extKoszul(X,X);
-    S := ring E;
-    radical ann(E)
+supportVariety(Complex) := Ideal => opts -> (Y) -> (
+    
+    if opts.FiniteLength then (
+	R := ring Y;
+	k := complex(R^1/ideal vars R);
+	E := extKoszul(Y,k);
+	radical ann(E)
+	) else (
+	E = extKoszul(Y,Y);
+	radical ann(E)
+	)
 )
 
-supportVariety(Module) := Ideal => (M) -> (
-    supportVariety(complex(M))
+supportVariety(Module) := Ideal => opts -> (M) -> (
+    supportVariety(complex(M), FiniteLength => opts.FiniteLength)
 )
 
 ---------------------------------------------------------------
@@ -496,10 +505,10 @@ extKoszul(Complex,Complex) := Module => (M,N) -> (
     -- Construct ring of cohomological operators (over field)
     K := coefficientRing A;
     X := getSymbol "X";
-    S := K[ X_1 .. X_c, toSequence gens A,
+    S := K(monoid[X_1 .. X_c, toSequence gens A,
            Degrees => { apply(0 .. c-1, i -> prepend(-2, - degree f_i)),
                         apply(0 .. n-1, j -> prepend( 0,   degree A_j))},
-           Heft => {-2,1} ];
+           Heft => {-2,1} ]);
     -- Natural inclusion A -> S
     toS := map(S,A,apply(toList(c .. c+n-1), i -> S_i),DegreeMap => prepend_0);
     
