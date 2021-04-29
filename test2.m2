@@ -193,3 +193,159 @@ N = complex(R^1 / ideal vars R)
     nonzeroes_1 * nonzeroes_2
     
     nonzeroes_6
+
+    
+
+---------------------------------------------------------------
+-- Test for problems with extkoszul
+---------------------------------------------------------------
+uninstallPackage "ThickSubcategories"
+restart
+installPackage "ThickSubcategories"
+needsPackage "Complexes"
+needsPackage "CompleteIntersectionResolutions"
+needsPackage "ThickSubcategories"
+---------------------------------------------------------------
+-- check extKoszul
+
+R = QQ[x,y]/ideal(x^2,y^2)
+-- M = complex koszul matrix{{y}}
+M = complex(R^1/ideal(y))
+-- N = complex(R^1/ideal vars R)
+N = complex(R^1/ideal(y))
+
+B = R;
+
+p = presentation B;
+A = ring p;
+I = trim ideal p;
+n = numgens A;
+c = numgens I;
+f = apply(c, i -> I_i);
+
+M' = restrict(M,A);
+
+-- Construct ring of cohomological operators (over field)
+K = coefficientRing A;
+X = getSymbol "X";
+S = K(monoid[X_1 .. X_c, toSequence gens A,
+    Degrees => { apply(0 .. c-1, i -> prepend(-2, - degree f_i)),
+                    apply(0 .. n-1, j -> prepend( 0,   degree A_j))},
+    Heft => {-2,1} ]);
+-- Natural inclusion A -> S
+toS = map(S,A,apply(toList(c .. c+n-1), i -> S_i),DegreeMap => prepend_0);
+
+-----------------------------------------------------------
+getDeltaC = (C,homotopies) -> (
+
+    degreesC = sort select(keys C, i -> class i === ZZ);
+    --     degreesC = toList(min(C)..max(C));
+    Cstar = S^(apply(degreesC,i -> toSequence apply(degrees C_i, d -> prepend(i,d))));
+
+    prodX = o -> product toList(apply(pairs o, i -> S_(i_0)^(i_1)));
+
+    -- Create a matrix for each entry of homotopies
+    r = rank Cstar;
+    ranksC = apply(degreesC, o -> rank(C_o));
+
+    matrixfromblocks = (M) -> fold((a,b) -> a || b,apply(M, w -> fold((a,b) -> a | b, w)));
+    makematrix = (L,M) -> (
+        -- L a list {gamma,d} where gamma a list of integers of length c and d a degree of C
+        -- M a matrix
+        -- Find position to place M in
+        topleftrow = sum take(ranksC, L_1 + 2*(sum L_0) - 1 - min C);
+        topleftcolumn = sum take(ranksC, L_1 - min C);
+        matrix table(r,r, (p,q) -> (
+            if (
+                (p >= topleftrow) and (p < (topleftrow + numRows M)) and 
+                (q >= topleftcolumn) and (q < (topleftcolumn + numColumns M))
+            ) then 
+                M_(p-topleftrow,q-topleftcolumn) else 0
+            )
+        )
+    );
+
+    DeltaCmatrix = sum(apply(select(keys homotopies, i -> homotopies#i != 0), i -> prodX(i_0)*toS(makematrix(i,homotopies#i))));
+    DeltaC = map( Cstar,
+                Cstar, 
+                transpose DeltaCmatrix,
+                Degree => { -1, degreeLength A:0 })
+)
+
+getDeltaN = (N) -> (
+    degreesN = toList((min N) .. (max N));
+    Ndelta = apply(degreesN, i -> N.dd_i);
+    Nmods = apply(degreesN, i -> tensor(S,toS,restrict(N_i,A)));
+    Nmatrix = apply(Ndelta, f -> tensor(S,toS,restrict(f,A)));
+    Nsize = apply(Nmods,numgens);
+    Ntable = table(#Nmatrix,#Nmatrix, (p,q) -> if (p == (q-1)) then Nmatrix_(p+1) else map(S^(Nsize_p),S^(Nsize_q),0));
+
+    DeltaNmatrix = matrixfromblocks Ntable;
+    Ngraded = fold((a,b) -> a ++ b,Nmods);
+    DeltaN = map(Ngraded,Ngraded,DeltaNmatrix)
+)
+
+getDeltaBar = (C,N) -> (
+    homotopies = makeHomotopies(matrix{f},C);
+    DeltaC = getDeltaC(C,homotopies);
+    
+    degreesN = toList((min N) .. (max N));
+    Ndelta = apply(degreesN, i -> N.dd_i);
+    Nmods = apply(degreesN, i -> tensor(S,toS,restrict(N_i,A)));
+    Nmatrix = apply(Ndelta, f -> tensor(S,toS,restrict(f,A)));
+    Nsize = apply(Nmods,numgens);
+    Ntable = table(#Nmatrix,#Nmatrix, (p,q) -> if (p == (q-1)) then Nmatrix_(p+1) else map(S^(Nsize_p),S^(Nsize_q),0));
+
+    DeltaNmatrix = matrixfromblocks Ntable;
+    Ngraded = fold((a,b) -> a ++ b,Nmods);
+    DeltaN = map(Ngraded,Ngraded,DeltaNmatrix);
+    
+    SignIdCstar = diagonalMatrix flatten toList apply(pairs(ranksC), w -> if even(w_0) then apply(toList(1 .. w_1), o -> -1) else apply(toList(1 .. w_1), o -> 1));
+
+    SignIdCstar = promote(SignIdCstar, S); 
+
+    DeltaBar = SignIdCstar ** DeltaN + DeltaC ** id_Ngraded
+)
+-----------------------------------------------------------
+-- Lifted Resolution of M
+C1 = chainComplex resolution(M')
+homotopies1 = makeHomotopies(matrix{f},C1)
+DeltaC1 = getDeltaC(C1,homotopies1)
+
+-- Resolution by hand of M
+use A;
+del1 = map(A^1,,matrix{{y,x^2,y^2}})
+del2 = map(source del1,,matrix{{0,-y^2,-x^2},{-y^2,0,y},{x^2,y,0}})
+del3 = map(source del2,,matrix{{y},{-x^2},{y^2}})
+C2 = chainComplex complex{del1,del2,del3}
+homotopies2 = makeHomotopies(matrix{f},C2)
+DeltaC2 = getDeltaC(C2,homotopies2)
+
+-- Against the residue field
+N1 = N
+DeltaN1 = getDeltaN(N)
+
+-- Against itself
+N2 = M
+DeltaN2 = getDeltaN(M)
+
+-----------------------------------------------------------
+-- lifted resolution against residue field
+DeltaBar1 = getDeltaBar(C1,N1)
+prune homology(DeltaBar1,DeltaBar1)
+radical ann(oo)
+
+-- lifted resolution against M
+DeltaBar2 = getDeltaBar(C1,N2)
+prune homology(DeltaBar2,DeltaBar2)
+radical ann(oo)
+
+-- resolution by hand against residue field
+DeltaBar3 = getDeltaBar(C2,N1)
+prune homology(DeltaBar3,DeltaBar3)
+radical ann(oo)
+
+-- resolution by hand against M
+DeltaBar4 = getDeltaBar(C2,N2)
+prune homology(DeltaBar4,DeltaBar4)
+radical ann(oo)
