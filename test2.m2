@@ -12,7 +12,13 @@ time supportVariety(Y, FiniteLength => true)
 
 
 
+
+
 --problem example
+uninstallPackage "ThickSubcategories"
+restart
+path=append(path,"~/Documents/Github/levels");
+installPackage "ThickSubcategories"
 restart
 needsPackage "Complexes"
 needsPackage "ThickSubcategories";
@@ -21,6 +27,7 @@ R = QQ[x,y]/ideal"x2,y2"
 Y = complex koszul matrix{{y}}
 time supportVariety(R^1)
 time supportVariety(Y)
+time ann extKoszul(Y,Y, ResidueField => true)
 time supportVariety(Y,FiniteLength => true)
 
 
@@ -32,6 +39,7 @@ needsPackage "CompleteIntersectionResolutions";
 R = QQ[x,y,z]/ideal"x2,xy,z2"
 Y = complex koszul matrix{{z}}
 time supportVariety(R^1)
+time supportVariety(Y)
 time supportVariety(Y,FiniteLength => true)
 
 
@@ -46,11 +54,21 @@ needsPackage "CompleteIntersectionResolutions";
 R = QQ[x,y,z,w]/ideal"x2,xy,yz,zw,w2"
 X = complex koszul matrix{{x,y,z,w}}
 time supportVariety(X)
+time ann extKoszul(X,X, ResidueField => true)
 time supportVariety(X,FiniteLength => true)
 
 time supportVariety(R^1)
 
 
+restart
+needsPackage "Complexes"
+needsPackage "ThickSubcategories";
+needsPackage "CompleteIntersectionResolutions";
+R = QQ[x]/ideal"x2"
+Y = complex koszul matrix{{x}}
+time supportVariety(R^1)
+time supportVariety(Y)
+time supportVariety(Y,FiniteLength => true)
 
 
 
@@ -163,6 +181,9 @@ N = complex(R^1 / ideal vars R)
     C.dd
     
     SignIdCstar
+    
+    homotopies
+    
     
     
     H

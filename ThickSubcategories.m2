@@ -16,6 +16,7 @@ export {
     "MaxLevelAttempts",
     "LengthLimitGenerator",
     "FiniteLength",
+    "ResidueField",
     -- Methods
     "ghost",
     "coghost",
@@ -264,7 +265,7 @@ supportVariety(Complex) := Ideal => opts -> (Y) -> (
     if opts.FiniteLength then (
 	R := ring Y;
 	k := complex(R^1/ideal vars R);
-	E := extKoszul(Y,k);
+	E := extKoszul(k,Y);
 	radical ann(E)
 	) else (
 	E = extKoszul(Y,Y);
@@ -279,9 +280,9 @@ supportVariety(Module) := Ideal => opts -> (M) -> (
 ---------------------------------------------------------------
 -- 
 ---------------------------------------------------------------
-isBuilt = method( TypicalValue => Boolean );
+isBuilt = method( TypicalValue => Boolean , Options => { FiniteLength => false } );
 
-isBuilt(Complex,Complex) := Boolean => (X,G) -> (
+isBuilt(Complex,Complex) := Boolean => opts -> (X,G) -> (
     if not(ring X === ring G) then return "expected complexes over the same ring";
     
     -- Check if the complexes are perfect
@@ -303,10 +304,16 @@ isBuilt(Complex,Complex) := Boolean => (X,G) -> (
     -- for now against the residue field
     R := ring X;
     k := complex(R^1/ideal vars R);
-    E1 := extKoszul(X,k);
-    E2 := extKoszul(G,k);
---     E1 := extKoszul(X,X);
---     E2 := extKoszul(G,G);
+    
+    if opts.FiniteLength then (
+	E1 := extKoszul(R^1/ideal vars R,X);
+	E2 := extKoszul(R^1/ideal vars R,G);
+	) else (
+	E1 = extKoszul(X,X);
+	E2 = extKoszul(G,G);
+	);
+    
+    
     S1 := ring E1;
     S2 := ring E2;
     iso := map(S2,S1, gens S2);
@@ -481,8 +488,8 @@ restrict(Complex) := Complex => (C) -> (
 -- complete ext over non-ci
 ---------------------------------------------------------------
 
-extKoszul = method();
-extKoszul(Complex,Complex) := Module => (M,N) -> (
+extKoszul = method( Options => { ResidueField => false } );
+extKoszul(Complex,Complex) := Module => opts -> (M,N) -> (
     B := ring M;
     if not(B === ring(N)) then error "expected complexes over the same ring";
     if not isCommutative B
@@ -499,8 +506,6 @@ extKoszul(Complex,Complex) := Module => (M,N) -> (
     c := numgens I;
     f := apply(c, i -> I_i);
     
-    M' := restrict(M,A); -- homogeneous
-    assert isHomogeneous M'; -- is this necessary, that is is there a way that the construction could give a non-homogeneous module?
     
     -- Construct ring of cohomological operators (over field)
     K := coefficientRing A;
@@ -514,10 +519,18 @@ extKoszul(Complex,Complex) := Module => (M,N) -> (
     
     if (M == 0 or N == 0) then return S^0;
     
-    C := chainComplex resolution(M');
-    -- keys: {J,d} where J a list of integers of length c and d the degree of the source in C
-    homotopies := makeHomotopies(matrix{f},C);
     
+    
+    if opts.ResidueField then (
+	C := koszul vars A;
+	) else (
+	M' := restrict(M,A); -- homogeneous
+	assert isHomogeneous M'; -- is this necessary, that is is there a way that the construction could give a non-homogeneous module?    
+	C = chainComplex resolution(M');
+	-- keys: {J,d} where J a list of integers of length c and d the degree of the source in C
+	);
+    	    
+    homotopies := makeHomotopies(matrix{f},C);
     -- Construct Cstar = (S \otimes_A C)^\natural
     degreesC := sort select(keys C, i -> class i === ZZ);
 --     degreesC := toList(min(C)..max(C));
