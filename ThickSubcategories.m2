@@ -42,7 +42,7 @@ needsPackage "CompleteIntersectionResolutions"
 ---------------------------------------------------------------
 
 ---------------------------------------------------------------
--- This function creates the G-ghost map associated to the approximation
+-- Create the G-ghost map associated to the right G-approximation
 ---------------------------------------------------------------
 ghost = method( TypicalValue => ComplexMap );
 
@@ -102,7 +102,7 @@ ghost(Complex) := ComplexMap => (X) -> (
 )
 
 ---------------------------------------------------------------
--- This function creates the R-coghost map associated to the approximation
+-- Create the G-coghost map associated to the left G-approximation
 ---------------------------------------------------------------
 coghost = method( TypicalValue => ComplexMap );
 
@@ -139,7 +139,7 @@ coghost(Complex) := ComplexMap => (X) -> (
 )
 
 ---------------------------------------------------------------
--- This function computes the level of X with respect to G
+-- Compute the level of X with respect to G
 ---------------------------------------------------------------
 level = method( TypicalValue => ZZ,
                 Options => { MaxLevelAttempts => 10,
@@ -150,8 +150,10 @@ level = method( TypicalValue => ZZ,
 level(Complex,Complex) := ZZ => opts -> (G,X) -> (
     -- Check that G and X are complexes over the same ring
     if not(ring G === ring X) then error "expected complexes over the same ring";
-    -- We need X to be a complex of free/projective modules, so that any map from X is zero iff it is null homotopic
+    
+    -- We need G to be a complex of free/projective modules to compute Ext
     rG := resolution(G, LengthLimit => opts.LengthLimitGenerator);
+    -- We need X to be a complex of free/projective modules, so that any map from X is zero iff it is null homotopic
     rX := resolution(X, LengthLimit => opts.LengthLimit);
     n := 0;
     f := id_(rX);
@@ -182,6 +184,7 @@ level(Complex,Complex) := ZZ => opts -> (G,X) -> (
     n
 )
 
+-- Level with respect to R
 level(Complex) := ZZ => opts -> (X) -> (
     rX := resolution(X, LengthLimit => opts.LengthLimit);
     n := 0;
@@ -233,10 +236,7 @@ level(Complex,Module) := ZZ => opts -> (G,N) -> (
 isPerfect = method( TypicalValue => Boolean );
 
 isPerfect(Complex) := Boolean => (F) -> (
-    
-    
-    
-    -- First make the ring and its residue field for the complex M
+    -- Ring and its residue field for the complex F
     R := ring F;
     m := ideal(vars R);
     k := complex(R^1/m);
@@ -250,27 +250,27 @@ isPerfect(Complex) := Boolean => (F) -> (
     -- If true, then M is perfect; otherwise, M is not perfect over R
     HH_d(T) == 0
 )
--- Detects whether a module is perfect
+
 isPerfect(Module) := Boolean => (M) -> (
     isPerfect(complex(M))
 )
 
 ---------------------------------------------------------------
--- Computes the support variety of a module
+-- Compute the support variety of a complex
 ---------------------------------------------------------------
-supportVariety = method( TypicalValue => Ideal, Options => { FiniteLength => false } );
+supportVariety = method( TypicalValue => Ideal,
+                         Options => { FiniteLength => false } );
 
 supportVariety(Complex) := Ideal => opts -> (Y) -> (
-    
     if opts.FiniteLength then (
-	R := ring Y;
-	k := complex(R^1/ideal vars R);
-	E := extKoszul(k,Y);
-	radical ann(E)
-	) else (
-	E = extKoszul(Y,Y);
-	radical ann(E)
-	)
+        R := ring Y;
+        k := complex(R^1/ideal vars R);
+        E := extKoszul(k,Y);
+        radical ann(E)
+    ) else (
+        E = extKoszul(Y,Y);
+        radical ann(E)
+    )
 )
 
 supportVariety(Module) := Ideal => opts -> (M) -> (
@@ -278,9 +278,10 @@ supportVariety(Module) := Ideal => opts -> (M) -> (
 )
 
 ---------------------------------------------------------------
--- 
+-- Check if X is built by G
 ---------------------------------------------------------------
-isBuilt = method( TypicalValue => Boolean , Options => { FiniteLength => false } );
+isBuilt = method( TypicalValue => Boolean ,
+                  Options => { FiniteLength => false } );
 
 isBuilt(Complex,Complex) := Boolean => opts -> (X,G) -> (
     if not(ring X === ring G) then return "expected complexes over the same ring";
@@ -290,9 +291,11 @@ isBuilt(Complex,Complex) := Boolean => opts -> (X,G) -> (
     perfectG := isPerfect(G);
     if (perfectG and not perfectX) then return false;
     
-    -- Check the support of the homologies over the ring
-    annH := (C) -> ( (lo,hi) := concentration C;
-                     intersect apply(apply(toList(lo..hi),n -> HH_n(C)),ann));
+    -- Check the 'classical' support of the homologies over the ring
+    annH := (C) -> (
+        (lo,hi) := concentration C;
+        intersect apply(apply(toList(lo..hi),n -> HH_n(C)),ann)
+    );
     answerSuppH := isSubset(annH G ,radical annH X);
     if not answerSuppH then (
         return false;
@@ -301,26 +304,26 @@ isBuilt(Complex,Complex) := Boolean => opts -> (X,G) -> (
     );
     
     -- Check the support variety
-    -- for now against the residue field
-    R := ring X;
-    k := complex(R^1/ideal vars R);
-    
     if opts.FiniteLength then (
-	E1 := extKoszul(R^1/ideal vars R,X);
-	E2 := extKoszul(R^1/ideal vars R,G);
-	) else (
-	E1 = extKoszul(X,X);
-	E2 = extKoszul(G,G);
-	);
+        -- When a complex has finite length, check against the residue field
+        R := ring X;
+        k := R^1/ideal vars R;
+        E1 := extKoszul(k,X);
+        E2 := extKoszul(k,G);
+    ) else (
+        E1 = extKoszul(X,X);
+        E2 = extKoszul(G,G);
+    );
     
-    
+    -- Make E1 and E2 over the same (not just iso) ring
     S1 := ring E1;
     S2 := ring E2;
     iso := map(S2,S1, gens S2);
     E1 = tensor(S2,iso,E1);
-    -- If the subset contain each other, print a warning.
+    
     answerSuppVar := isSubset(ann E2, radical ann E1);
     if not answerSuppVar then return false;
+    -- If the subsets contain each other, print a warning.
     print "Warning: Need not be correct if the ring is not ci";
     return true;
 )
@@ -338,7 +341,7 @@ isBuilt(Module,Complex) := Boolean => (M,G) -> (
 )
 
 ---------------------------------------------------------------
--- restriction of scalars
+-- Rectriction to scalars of modules, complexes, maps
 ---------------------------------------------------------------
 
 restrict = method();
@@ -487,8 +490,8 @@ restrict(Complex) := Complex => (C) -> (
 ---------------------------------------------------------------
 -- complete ext over non-ci
 ---------------------------------------------------------------
-
 extKoszul = method( Options => { ResidueField => false } );
+
 extKoszul(Complex,Complex) := Module => opts -> (M,N) -> (
     B := ring M;
     if not(B === ring(N)) then error "expected complexes over the same ring";
@@ -519,17 +522,15 @@ extKoszul(Complex,Complex) := Module => opts -> (M,N) -> (
     
     if (M == 0 or N == 0) then return S^0;
     
-    
-    
     if opts.ResidueField then (
-	C := koszul vars A;
-	) else (
-	M' := restrict(M,A); -- homogeneous
-	assert isHomogeneous M'; -- is this necessary, that is is there a way that the construction could give a non-homogeneous module?    
-	C = chainComplex resolution(M');
-	-- keys: {J,d} where J a list of integers of length c and d the degree of the source in C
-	);
-    	    
+        C := koszul vars A;
+    ) else (
+        M' := restrict(M,A); -- homogeneous
+        assert isHomogeneous M'; -- is this necessary, that is is there a way that the construction could give a non-homogeneous module?    
+        C = chainComplex resolution(M');
+        -- keys: {J,d} where J a list of integers of length c and d the degree of the source in C
+    );
+    
     homotopies := makeHomotopies(matrix{f},C);
     -- Construct Cstar = (S \otimes_A C)^\natural
     degreesC := sort select(keys C, i -> class i === ZZ);
@@ -1002,6 +1003,26 @@ doc ///
     Description
         Text
             TODO
+    Caveat
+        Only returns a correct answer if the input is a module or a complex of finite length homology using the optional input {\tt FiniteLength}.
+///
+
+doc ///
+    Key
+        FiniteLength
+        [supportVariety,FiniteLength]
+        [isBuilt,FiniteLength]
+    Headline
+        simplify computation when the input has finite length homology
+    Usage
+        supportVariety(..., FiniteLength => false)
+    Description
+        Text
+            For a complex with finite length homology $X$ the support variety can be computed via the support of the ext module ${\rm Ext}(k,X)$ where $k$ is the residue field.
+    SeeAlso
+        supportVariety
+        isBuilt
+
 ///
 
 doc ///
@@ -1035,6 +1056,8 @@ doc ///
             isBuilt(X,Y)
             isBuilt(Y,X)
     Caveat
+        Only returns a correct answer if the input is a module or a complex of finite length homology using the optional input {\tt FiniteLength}.
+        
         When the method returns {\tt true}, $X$ need not be built by $Y$. In the following cases {\tt true} is correct:
         
         - The ring is complete intersection, or
