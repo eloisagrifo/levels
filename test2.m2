@@ -10,10 +10,6 @@ time supportVariety(Y, FiniteLength => true)
 
 
 
-
-
-
-
 --problem example
 uninstallPackage "ThickSubcategories"
 restart
