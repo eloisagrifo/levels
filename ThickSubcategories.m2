@@ -351,6 +351,9 @@ restrict(Module) := Module => (M) -> (
     
     p := presentation R;
     Q := ring p;
+    
+    if (M == 0) then return Q^0;
+    
     I := trim ideal p;
     
     pM := lift(presentation M,Q);
@@ -363,6 +366,7 @@ restrict(Module,Ring) := Module => (M,Q) -> (
     R := ring M;
     
     if (R === Q) then return M;
+    if (M == 0) then return Q^0;
     
     if not isQuotientOf(Q,R) then error "expected ring of module to be a quotient of second input";
     
@@ -509,7 +513,6 @@ extKoszul(Complex,Complex) := Module => opts -> (M,N) -> (
     c := numgens I;
     f := apply(c, i -> I_i);
     
-    
     -- Construct ring of cohomological operators (over field)
     K := coefficientRing A;
     X := getSymbol "X";
@@ -579,11 +582,11 @@ extKoszul(Complex,Complex) := Module => opts -> (M,N) -> (
 
     -- Rewrite N as a graded S-module D with a degree -1 map
     degreesN := toList((min N) .. (max N));
-    Ndelta := apply(degreesN, i -> N.dd_i);
-    Nmods := apply(degreesN, i -> tensor(S,toS,restrict(N_i,A)));
+    Ndelta := apply(drop(degreesN,1), i -> N.dd_i);
+    Nmods := apply(degreesN, i -> tensor(S,toS,restrict(N_i,A))); -- take them from Nmatrix? Might be faster when N a complex
     Nmatrix := apply(Ndelta, f -> tensor(S,toS,restrict(f,A)));
     Nsize := apply(Nmods,numgens);
-    Ntable := table(#Nmatrix,#Nmatrix, (p,q) -> if (p == (q-1)) then Nmatrix_(p+1) else map(S^(Nsize_p),S^(Nsize_q),0));
+    Ntable := table(#degreesN,#degreesN, (p,q) -> if (p == (q-1)) then Nmatrix_p else map(S^(Nsize_p),S^(Nsize_q),0));
     
     DeltaNmatrix := matrixfromblocks Ntable;
     Ngraded := fold((a,b) -> a ++ b,Nmods);
