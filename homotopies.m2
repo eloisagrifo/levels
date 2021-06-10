@@ -1,3 +1,5 @@
+needsPackage "Complexes"
+needsPackage "CompleteIntersectionResolutions"
 
 makeHomotopies(Matrix, Complex, ZZ) := (f,F,d) ->(
                  --given a 1 x lenf matrix f and a chain complex 
@@ -60,19 +62,30 @@ makeHomotopies(Matrix, Complex, ZZ) := (f,F,d) ->(
 
 
 
+R = QQ[x,y,z]
+f = {x*y,y*z}
+F = freeResolution(R^1/ideal vars R)
+d = 5
 
 makeHomotopies(List, Complex, ZZ) := (f,F,d) ->(
-    S := ring F;
+    S = ring F;
     if f == {} then return hashTable{};
-    lenf := #f;
-    degs := apply(f, i -> degree i); -- list of degrees (each is a list)
+    lengthf = #f;
+    degs = apply(f, i -> degree i); -- list of degrees (each is a list)
     minF := min F;
     maxF := max F;
     if d>max F then d=maxF;
-    
-    )
-
-    	    	    
-                 e0 = (expo(lenf,0))_0;
-
-                 e1 = expo(lenf,1);
+    e0 = (expo(lengthf,0))_0;
+    L0 = apply(toList((minF+1) .. d), i -> ({e0,i},F.dd_i))
+    H = new MutableHashTable from L0
+    e1 = expo(lengthf,1)
+    p1 = flatten table(toList(minF .. (d-1)), toList(0 .. (lengthf-1)), (i,j) -> (i,j))
+    scan(p1, (i,j) -> (
+	    if H#?{e1_j,i-1} then 
+		H#{e1_j,i} = (-H#{e1_j,i-1}*H#{e0,i} + f_j*id_(F_i))//H#{e0,i+1}
+		 else
+		H#{e1_j,i} = (f_j*id_(F_i))//H#{e0,i+1}
+	    )
+	)
+	    
+peek H	
