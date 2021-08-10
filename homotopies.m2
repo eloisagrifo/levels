@@ -1,6 +1,9 @@
 needsPackage "Complexes"
 needsPackage "CompleteIntersectionResolutions"
 
+-----------------------------------------------------------
+-- Code from Package Complete Intersection Resolutions
+-----------------------------------------------------------
 makeHomotopies(Matrix, Complex, ZZ) := (f,F,d) ->(
                  --given a 1 x lenf matrix f and a chain complex 
                  -- F_min <-...,
@@ -60,32 +63,120 @@ makeHomotopies(Matrix, Complex, ZZ) := (f,F,d) ->(
                  H1)
 
 
+-----------------------------------------------------------
+-- Attempt to make it more efficient
+-----------------------------------------------------------
+needsPackage "Complexes"
+needsPackage "CompleteIntersectionResolutions"
 
-
-R = QQ[x,y,z]
-f = {x*y,y*z}
+R = QQ[w,x,y,z]
+f = {w*x,x*y,y*z}
 F = freeResolution(R^1/ideal vars R)
 d = 5
 
-makeHomotopies(List, Complex, ZZ) := (f,F,d) ->(
+-- JL: What exactly is d doing? It seems to limit the computation in two directions.
+
+--makeHomotopies(List, Complex, ZZ) := (f,F,d) -> (
+makeHomotopiesNew = (f,F,d) -> (
     S = ring F;
     if f == {} then return hashTable{};
+    
     lengthf = #f;
     degs = apply(f, i -> degree i); -- list of degrees (each is a list)
     minF := min F;
     maxF := max F;
-    if d>max F then d=maxF;
-    e0 = (expo(lengthf,0))_0;
-    L0 = apply(toList((minF+1) .. d), i -> ({e0,i},F.dd_i))
-    H = new MutableHashTable from L0
-    e1 = expo(lengthf,1)
-    p1 = flatten table(toList(minF .. (d-1)), toList(0 .. (lengthf-1)), (i,j) -> (i,j))
+    
+    if d > max F then d = maxF;
+    
+    -- differentials are the zeroth homotopies
+    e0 := (expo(lengthf,0))_0;
+    L0 := apply(toList((minF+1) .. d), i -> ({e0,i},F.dd_i));
+    H := new MutableHashTable from L0;
+    
+    -- create first homotopies
+    e1 := expo(lengthf,1);
+    p1 := flatten table(toList(minF .. (d-1)), toList(0 .. (lengthf-1)), (i,j) -> (i,j));
     scan(p1, (i,j) -> (
-	    if H#?{e1_j,i-1} then 
-		H#{e1_j,i} = (-H#{e1_j,i-1}*H#{e0,i} + f_j*id_(F_i))//H#{e0,i+1}
-		 else
-		H#{e1_j,i} = (f_j*id_(F_i))//H#{e0,i+1}
-	    )
-	)
-	    
-peek H	
+            if H#?{e1_j,i-1} then 
+                H#{e1_j,i} = (-H#{e1_j,i-1}*H#{e0,i} + f_j*id_(F_i))//H#{e0,i+1}
+            else
+                H#{e1_j,i} = (f_j*id_(F_i))//H#{e0,i+1} )
+    );
+    
+    homotopiesInDegree := (k) -> (
+        e := expo(lengthf,k);
+        p := flatten table(toList(minF .. (d-2*k+1)), toList(0 .. (#e-1)), (i,j) -> (i,j));
+        scan(p, (i,j) -> (
+            s := sum(expo(lengthf,e_j), M -> (
+                if H#?{e_j-M,i+2*sum(M)-1} and H#?{M,i} then
+                    H#{e_j-M,i+2*sum(M)-1}*H#{M,i}
+                else
+                    0 )
+            );
+            if s != 0 then H#{e_j,i} = -s//H#{e0,i+2*k-1} )
+        );
+    );
+    
+    scan(toList(2..d),homotopiesInDegree);
+    
+    return H
+)
+
+peek H
+
+-- JL: expo is slow, and we are using it recursively. 
+
+-----------------------------------------------------------
+-- Compare the methods
+-----------------------------------------------------------
+restart
+needsPackage "Complexes"
+needsPackage "CompleteIntersectionResolutions"
+
+-----------------------------------------------------------
+R = QQ[w,x,y,z]
+f = {w*x,x*y,y*z}
+F = freeResolution(R^1/ideal vars R)
+d = 5
+
+time makeHomotopiesNew(f,F,d);
+-- time: 0.02
+
+time makeHomotopies(matrix{f},chainComplex F,d);
+-- time: 0.06
+-----------------------------------------------------------
+R = R=QQ[x,y,z,w,t]
+f = {x^2,x*y,y*z,z*w,w*t,t^2}
+F = freeResolution(R^1/ideal vars R)
+d = max F
+
+time makeHomotopiesNew(f,F,d);
+-- time: 0.72
+
+time makeHomotopies(matrix{f},chainComplex F,d);
+-- time: 0.69
+-----------------------------------------------------------
+n = 7
+R = R=QQ[x_0..x_n]
+f = join({x_0},apply(toList(1..n),i -> x_(i-1)*x_i),{(x_n)^2})
+F = freeResolution(R^1/ideal vars R);
+d = max F
+
+time makeHomotopiesNew(f,F,d);
+-- time n = 7: 20.9
+
+time makeHomotopies(matrix{f},chainComplex F,d);
+-- time n = 7: 28.75
+-----------------------------------------------------------
+
+
+
+
+
+
+
+
+
+
+
+
