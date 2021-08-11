@@ -156,7 +156,7 @@ time makeHomotopiesNew(f,F,d);
 time makeHomotopies(matrix{f},chainComplex F,d);
 -- time: 0.69
 -----------------------------------------------------------
-n = 7
+n = 9
 R = R=QQ[x_0..x_n]
 f = join({x_0},apply(toList(1..n),i -> x_(i-1)*x_i),{(x_n)^2})
 F = freeResolution(R^1/ideal vars R);
@@ -164,19 +164,25 @@ d = max F
 
 time makeHomotopiesNew(f,F,d);
 -- time n = 7: 20.9
+-- time n = 9: 274.1
 
 time makeHomotopies(matrix{f},chainComplex F,d);
 -- time n = 7: 28.75
+-- time n = 9: 386.9
 -----------------------------------------------------------
+n = 7
+R = R=QQ[x_0..x_n]
+f = join(apply(toList(0..n),i -> (x_i)^2))
+F = freeResolution(R^1/ideal vars R);
+d = max F
 
+time makeHomotopiesNew(f,F,d);
+-- time n = 7: 6.07
+-- time n = 9: 135.4
 
-
-
-
-
-
-
-
-
+time makeHomotopies(matrix{f},chainComplex F,d);
+-- time n = 7: 10.6
+-- time n = 9: 200.1
+-----------------------------------------------------------
 
 
