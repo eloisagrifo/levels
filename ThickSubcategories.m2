@@ -378,7 +378,7 @@ restrict(Module,Ring) := Module => (M,Q) -> (
 )
 
 -- This can be simplified, especially at the end. 
-restrict(ModuleMap,Ring) := ModuleMap => (f,Q) -> (
+restrict(Matrix,Ring) := Matrix => (f,Q) -> (
     M := f.source;
     N := f.target;
     R := ring f;
@@ -392,7 +392,7 @@ restrict(ModuleMap,Ring) := ModuleMap => (f,Q) -> (
     G := cone(resolutionMap(complex(N),LengthLimit=>1));
     
     -- extend the map to the presentation of the modules
-    g := extend(G,F,f);
+    g := extend(G,F,map(G_0,F_0,f));
     
     -- lift the ring
     I := kernel(map(R,Q,flatten entries vars R));
@@ -418,7 +418,7 @@ restrict(ModuleMap,Ring) := ModuleMap => (f,Q) -> (
 )
 
 -- This can be simplified, especially at the end. 
-restrict(ModuleMap) := ModuleMap => (f) -> (
+restrict(Matrix) := Matrix => (f) -> (
     M := f.source;
     N := f.target;
     R := ring f;
@@ -428,7 +428,7 @@ restrict(ModuleMap) := ModuleMap => (f) -> (
     G := cone(resolutionMap(complex(N),LengthLimit=>1));
     
     -- extend the map to the presentation of the modules
-    g := extend(G,F,f);
+    g := extend(G,F,map(G_0,F_0,f));
     
     -- lift the ring
     p := presentation R;
@@ -686,7 +686,8 @@ doc ///
     
             {\bf References}
             
-            [BvdB03] Alexey I. Bondal and Michel van den Bergh, {\em Generators and representability of functors in commutative and noncommutative geometry}, Mosc. Math. J. {\bf 3} (2003), no.~1, 1–36, 258. \break
+            [BvdB03] Alexey I. Bondal and Michel van den Bergh, {\em Generators and representability of functors in commutative and noncommutative geometry}, Mosc. Math. J. {\bf 3} (2003), no.~1, 1–36, 258. 
+            
             [Chr98] J. Daniel Christensen. {\em Ideals in triangulated categories: phantoms, ghosts and skeleta}, Adv. Math., 136(2):284–339, 1998.
 ///
 
@@ -1106,18 +1107,18 @@ doc ///
 
 doc ///
     Key
-        (restrict,ModuleMap,Ring)
-        (restrict,ModuleMap)
+        (restrict,Matrix,Ring)
+        (restrict,Matrix)
     Headline
         view the map as a map over an ambient ring
     Usage
         restrict(f)
         restrict(f,Q)
     Inputs
-        f:ModuleMap
+        f:Matrix
         Q:Ring
     Outputs
-        :ModuleMap
+        :Matrix
             over Q or the polynomial ring
     Description
         Text
