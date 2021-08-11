@@ -463,13 +463,7 @@ restrict(Complex,Ring) := Complex => (C,Q) -> (
     if (a == b) then return complex(restrict(C_a,Q),Base => a);
     
     -- otherwise lift all differentials
-    -- list of restricted differentials
-    L := {};
-    
-    for i from (a + 1) to b do (
-        L = append(L,restrict(C.dd_i,Q));
-    );
-    
+    L := apply(toList(a+1..b),i -> restrict(C.dd_i,Q));
     complex(L,Base => a)
 )
 
@@ -481,13 +475,7 @@ restrict(Complex) := Complex => (C) -> (
     if (a == b) then return complex(restrict(C_a),Base => a);
     
     -- otherwise lift all differentials
-    -- list of restricted differentials
-    L := {};
-    
-    for i from (a + 1) to b do (
-        L = append(L,restrict(C.dd_i));
-    );
-    
+    L := apply(toList(a+1..b),i -> restrict(C.dd_i));
     complex(L,Base => a)
 )
 
