@@ -328,16 +328,16 @@ isBuilt(Complex,Complex) := Boolean => opts -> (X,G) -> (
     return true;
 )
 
-isBuilt(Module,Module) := Boolean => (M,N) -> (
-    isBuilt(complex M, complex N)
+isBuilt(Module,Module) := Boolean => opts -> (M,N) -> (
+    isBuilt(complex M, complex N, FiniteLength => opts.FiniteLength)
 )
 
-isBuilt(Complex,Module) := Boolean => (X,N) -> (
-    isBuilt(X,complex N)
+isBuilt(Complex,Module) := Boolean => opts -> (X,N) -> (
+    isBuilt(X,complex N, FiniteLength => opts.FiniteLength)
 )
 
-isBuilt(Module,Complex) := Boolean => (M,G) -> (
-    isBuilt(complex M,G)
+isBuilt(Module,Complex) := Boolean =>  opts -> (M,G) -> (
+    isBuilt(complex M,G, FiniteLength => opts.FiniteLength)
 )
 
 ---------------------------------------------------------------
