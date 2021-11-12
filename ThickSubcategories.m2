@@ -1025,12 +1025,12 @@ doc ///
         (isBuilt, Module, Complex)
         (isBuilt, Complex, Module)
     Headline
-        determines whether the first copmlex is built by the second
+        determines whether the first complex can be finitely built by the second
     Usage
-        isPerfect(X,Y)
-        isPerfect(M,N)
-        isPerfect(M,Y)
-        isPerfect(X,N)
+        isBuilt(X,Y)
+        isBuilt(M,N)
+        isBuilt(M,Y)
+        isBuilt(X,N)
     Inputs
         X:Complex
         Y:Complex
@@ -1038,7 +1038,7 @@ doc ///
         N:Module -- N is replaced with the corresponding complex
     Outputs
         :Boolean
-            true if Y is built by X, and false if not
+            true if Y can be finitely built by X, and false if not
     Description
         Example
             needsPackage "Complexes";
@@ -1048,7 +1048,7 @@ doc ///
             isBuilt(X,Y)
             isBuilt(Y,X)
     Caveat
-        Only returns a correct answer if the input is a module or a complex of finite length homology using the optional input {\tt FiniteLength}.
+        The answer is only guaranteed to be correct if the input is a module or a complex of finite length homology using the optional input {\tt FiniteLength}.
         
         When the method returns {\tt true}, $X$ need not be built by $Y$. In the following cases {\tt true} is correct:
         
@@ -1066,7 +1066,7 @@ doc ///
 
 doc ///
     Key
-        (restrict,Module,Ring)
+	(restrict,Module,Ring)
         (restrict,Module)
     Headline
         view the module as a module over an ambient ring
