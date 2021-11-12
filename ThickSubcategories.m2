@@ -26,7 +26,7 @@ export {
     "isBuilt",
     "nonProxySmall",
     "extKoszul",
-    "findgs",
+--    "findgs",
     "restrict"
 }
 
@@ -635,8 +635,8 @@ nonProxySmall(Ideal) := Ideal => I -> (
     G = append(G,newgs);
     kers = intersect(apply(L,ker))
     );
-    M := Q^1/I ** Q/I;
-    N := Q^1/I ** Q/I;
+    M := (Q^1/I) ** Q/I;
+    N := (Q^1/I) ** Q/I;
     w := select(1,G, o -> (N = (Q^1/o)**(Q/I); not isBuilt(M,N)));
     if w == {} then (return "none found") else return w_0
 )
@@ -1167,6 +1167,43 @@ doc ///
             F = complex(R^1/ideal(x),Base => 2)
             restrict(F,Q)
 ///
+
+
+doc ///
+    Key
+        nonProxySmall
+	(nonProxySmall,Ring)
+        (nonProxySmall,Ideal)
+    Headline
+        if the given ring is not a ci, constructs a module that is not proxy small
+    Usage
+        nonProxySmall(R)
+        nonProxySmall(I)
+    Inputs
+        C:Ring
+        I:Ideal
+    Outputs
+        :Module
+            nonproxy small module over the given ring
+    Description
+        Text
+            When no ring is given, the complex is lifted to the ambient polynomial ring of the ring of the complex. 
+        Example
+            R = QQ[x,y]/ideal(x^2,x*y)
+            nonProxySmall(R)
+         Text
+            We can instead give an ideal $I$ in a ring $Q$, and compute a non-proxy small module over $Q/I$
+        Example
+            Q = QQ[x,y]
+	    I = ideal(x^2,x*y)
+            nonProxySmall(I)
+        Text
+            If the given ring is a complete intersection, all modules are proxy small. 
+        Example
+            R = QQ[x]/ideal"x2"
+	    nonProxySmall(R)
+///
+
 
 doc ///
     Key
