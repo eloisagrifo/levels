@@ -621,6 +621,7 @@ makemap(Ideal,Ideal) := Matrix => (I,J) -> (
 nonProxySmall = method();
 nonProxySmall(Ideal) := Ideal => I -> (
     listf := flatten entries gens I;
+    if isRegularSequence listf then error "all modules over a ci are proxy small";
     Q := ring I;
     f := first listf;
     newgs := findgs(f);
@@ -638,7 +639,7 @@ nonProxySmall(Ideal) := Ideal => I -> (
     M := (Q^1/I) ** Q/I;
     N := (Q^1/I) ** Q/I;
     w := select(1,G, o -> (N = (Q^1/o)**(Q/I); not isBuilt(M,N)));
-    if w == {} then (return "none found") else return w_0
+    if w == {} then error "none found" else return w_0
 )
 nonProxySmall(Ring) := Module => R -> (
     I := ideal R;
@@ -1200,8 +1201,8 @@ doc ///
         Text
             If the given ring is a complete intersection, all modules are proxy small. 
         Example
-            R = QQ[x]/ideal"x2"
-	    nonProxySmall(R)
+            R = QQ[x]/ideal(x^2)
+--	    nonProxySmall(R)
 ///
 
 
