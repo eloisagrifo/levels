@@ -674,11 +674,11 @@ extKoszul(Complex,Complex) := Module => opts -> (M,N) -> (
     ) else (
         M' := restrict(M,A); -- homogeneous
         assert isHomogeneous M'; -- is this necessary, that is is there a way that the construction could give a non-homogeneous module?    
-        C = chainComplex resolution(M');
+        C = resolution(M');
         -- keys: {J,d} where J a list of integers of length c and d the degree of the source in C
     );
     
-    homotopies := makeHomotopies(matrix{f},C);
+    homotopies := higherHomotopies(C);
     -- Construct Cstar = (S \otimes_A C)^\natural
     degreesC := sort select(keys C, i -> class i === ZZ);
 --     degreesC := toList(min(C)..max(C));
