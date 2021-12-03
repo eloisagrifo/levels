@@ -26,6 +26,7 @@ export {
     "isBuilt",
     "nonProxySmall",
     "extKoszul",
+    "higherHomotopies",
 --    "findgs",
     "restrict"
 }
@@ -478,6 +479,161 @@ restrict(Complex) := Complex => (C) -> (
     L := apply(toList(a+1..b),i -> restrict(C.dd_i));
     complex(L,Base => a)
 )
+
+
+
+---------------------------------------------------------------
+-- auxiliary functions for homotopies
+---------------------------------------------------------------
+
+
+makeMaps = method()
+makeMaps(Complex,Complex,RingElement) := (M,K,f) -> (    
+    w := apply(toList(min M .. max M), i -> inducedMap(K_i,M_i,f * id_(M_i)));
+    map(K,M,w)
+    )
+makeMaps(Complex,List,ZZ) := (M,maps,d) -> (
+    newmaps := apply(#maps, i -> map(M_(i+d),M_i,maps_i));
+    newmaps = newmaps | apply(toList(#maps .. length M), i -> map(M_(i+d),M_i,0));
+    map(M[d],M,newmaps)
+    )
+makeMaps(ComplexMap,Complex,Complex,ZZ) := (f,M,K,d) -> (
+    w := apply(toList(min M .. max M), i -> inducedMap(K_(i+d),M_i,f_i));
+	map(K[d],M,w)
+	)
+
+compl = method()
+compl(ZZ,List,List) := (MaxSize,w,L) -> (
+    i := L_1;
+    multideg := L_0; 
+    l := w - multideg; -- new multideg
+    if (((i + 2*sum(multideg) - 1) >= MaxSize) or ((i + 2*sum(w) - 2) >= MaxSize)) then {} else (
+	if any (l, o -> o<0) then {} else {l,i + 2*sum(multideg) - 1}
+	)
+    )
+
+
+
+
+---------------------------------------------------------------
+-- system of higher homotopies
+---------------------------------------------------------------
+
+
+higherHomotopies = method()
+higherHomotopies(Complex) := X -> (
+    R := ring X;
+    I := ideal R;
+    Q := ring I;
+    Pi := resolutionMap(restrict(X,Q));
+    M := source Pi;
+    higherHomotopies(flatten entries gens I, Pi,floor((length X + 1)/2))
+    )
+
+higherHomotopies(Module) := M -> higherHomotopies(complex(M))
+
+higherHomotopies(List,ComplexMap,ZZ) := (Igens,Pi,D) -> (
+    Q := ring Igens_0;
+    M := source Pi;
+    N := #Igens;
+    K := ker Pi;
+    fmaps := apply(Igens, f -> makeMaps(M,K,f));
+    gennullhoms := apply(fmaps, f -> complex nullhomotopy chainComplex f);
+    H := new MutableHashTable;
+    e := expo(N,1);
+    scan(flatten table(#e,length M, (i,j) -> {e_i,j}), 
+	k -> (
+	    l := k_1 + 2*sum(k_0)-1;
+	    H#k = inducedMap(M_l,K_l) * (gennullhoms_(position(k_0, o -> o==1)))_(k_1)));
+    
+    S := new MutableHashTable;
+    
+    allmaps := {};
+    nullhomotopies := {};
+    
+    highD := floor((length M + 1)/2);
+    
+    lowD := max{2, D+1};     
+    
+    for d from 2 to D do (
+	e = expo(N,d);
+	S = new MutableHashTable from flatten table(
+	    e, toList((min M) .. (max M - 1)), (w,i) -> ({w,i},map(M_(i+2*sum(w)-2),M_i,0)
+		)
+	    );
+	
+	scan(keys H ** e, P -> (
+	       w := P_0;
+	       i := w_1;
+	       u := P_1;
+	       v := compl(length M,u,w);
+	       if v != {} then S#{u,i} = S#{u,i} + (H#v * H#w)));
+       
+       allmaps = apply(e, w -> (
+	       deg := 2*sum(w) - 2; 
+	       premaps := apply(toList((min M) .. (max M - 1)), i -> S#{w,i});
+	       f := makeMaps(M, premaps, deg);
+	       {f,deg}
+	       )
+	   );
+       
+       allmaps = apply(allmaps, o -> (
+	       f:= o_0; 
+	       deg := o_1; 
+	       {makeMaps(f,M,K,deg),deg}));
+       
+       nullhomotopies = apply(allmaps, o -> (
+	       f := o_0; deg := o_1;
+	     inducedMap(M[deg],K[deg]) * (complex nullhomotopy chainComplex f)
+	     )
+	 );
+
+       scan( toList(0 .. (#e -1)) ** toList(min M .. length M - 2*d + 2), W -> (
+	       j := W_0;
+	       i := W_1;
+	       w := e_j;
+	       H#{w,i} = (nullhomotopies_j)_i
+	       )
+	   )
+       );
+ 
+    for d from lowD to highD do (
+	e = expo(N,d);
+	S = new MutableHashTable from flatten table(
+	    e, toList((min M) .. (max M - 1)), (w,i) -> ({w,i},map(M_(i+2*sum(w)-2),M_i,0)));
+	
+	scan(keys H ** e, P -> (
+	       w := P_0;
+	       i := w_1;
+	       u := P_1;
+	       v := compl(length M,u,w);
+	       if v != {} then S#{u,i} = S#{u,i} + (H#v * H#w)));
+       
+       allmaps = apply(e, w -> (
+	       deg := 2*sum(w) - 2; 
+	       premaps := apply(toList(min M .. (max M - 1)), i -> S#{w,i});
+	       makeMaps(M, premaps, deg)
+	       )
+	   );
+       
+       nullhomotopies = apply(allmaps, f -> complex nullhomotopy chainComplex f);
+
+       scan( toList(0 .. (#e -1)) ** toList((min M)  .. length M - 2*d + 2), W -> (
+	       j := W_0;
+	       i := W_1;
+	       w := e_j;
+	       H#{w,i} = (nullhomotopies_j)_i
+	       )
+	   )
+       );
+   
+    
+   
+    e = (expo(N,0))_0;--making degree 0 stuff
+    scan(toList(min M .. max M), i -> H#{e,i} = M.dd_i);
+    
+    hashTable pairs H)
+
 
 ---------------------------------------------------------------
 -- complete ext over non-ci
