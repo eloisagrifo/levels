@@ -582,7 +582,7 @@ higherHomotopies(List,ComplexMap,ZZ) := (Igens,Pi,D) -> (
        
        nullhomotopies = apply(allmaps, o -> (
 	       f := o_0; deg := o_1;
-	     inducedMap(M[deg],K[deg]) * (complex nullhomotopy chainComplex f)
+	       inducedMap(M[deg],K[deg]) * (complex nullhomotopy chainComplex f)
 	     )
 	 );
 
