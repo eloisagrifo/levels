@@ -484,24 +484,11 @@ restrict(Complex) := Complex => (C) -> (
 
 ---------------------------------------------------------------
 -- auxiliary functions for homotopies
----------------------------------------------------------------
+--------------------------------------------------------------
 
 
-makeMaps = method()
-makeMaps(Complex,Complex,RingElement) := (M,K,f) -> (    
-    w := apply(toList(min M .. max M), i -> inducedMap(K_i,M_i,f * id_(M_i)));
-    map(K,M,w)
-    )
-makeMaps(Complex,List,ZZ) := (M,maps,d) -> (
-    newmaps := apply(#maps, i -> map(M_(i+d),M_i,maps_i));
-    newmaps = newmaps | apply(toList(#maps .. length M), i -> map(M_(i+d),M_i,0));
-    map(M[d],M,newmaps)
-    )
-makeMaps(ComplexMap,Complex,Complex,ZZ) := (f,M,K,d) -> (
-    w := apply(toList(min M .. max M), i -> inducedMap(K_(i+d),M_i,f_i));
-	map(K[d],M,w)
-	)
-
+--given a key and a degree d
+--constructs the key for the codomain of a map of degree d starting at the given key
 compl = method()
 compl(ZZ,List,List) := (MaxSize,w,L) -> (
     i := L_1;
@@ -511,8 +498,6 @@ compl(ZZ,List,List) := (MaxSize,w,L) -> (
 	if any (l, o -> o<0) then {} else {l,i + 2*sum(multideg) - 1}
 	)
     )
-
-
 
 
 ---------------------------------------------------------------
@@ -537,10 +522,14 @@ higherHomotopies(List,ComplexMap,ZZ) := (Igens,Pi,D) -> (
     M := source Pi;
     N := #Igens;
     K := ker Pi;
-    fmaps := apply(Igens, f -> makeMaps(M,K,f));
+    --fmaps: list of the maps M -> K given by multiplication by each generator
+    fmaps := apply(Igens, f -> 
+	map(K,M,apply(toList(min M .. max M), i -> inducedMap(K_i,M_i,f * id_(M_i)))));
     gennullhoms := apply(fmaps, f -> complex nullhomotopy chainComplex f);
     H := new MutableHashTable;
     e := expo(N,1);
+    
+    --setting up homotopies of degree 1
     scan(flatten table(#e,length M, (i,j) -> {e_i,j}), 
 	k -> (
 	    l := k_1 + 2*sum(k_0)-1;
@@ -557,6 +546,7 @@ higherHomotopies(List,ComplexMap,ZZ) := (Igens,Pi,D) -> (
     
     for d from 2 to D do (
 	e = expo(N,d);
+	--S is an auxiliary hashtable
 	S = new MutableHashTable from flatten table(
 	    e, toList((min M) .. (max M - 1)), (w,i) -> ({w,i},map(M_(i+2*sum(w)-2),M_i,0)
 		)
@@ -570,17 +560,25 @@ higherHomotopies(List,ComplexMap,ZZ) := (Igens,Pi,D) -> (
 	       if v != {} then S#{u,i} = S#{u,i} + (H#v * H#w)));
        
        allmaps = apply(e, w -> (
-	       deg := 2*sum(w) - 2; 
-	       premaps := apply(toList((min M) .. (max M - 1)), i -> S#{w,i});
-	       f := makeMaps(M, premaps, deg);
-	       {f,deg}
+	       d := 2*sum(w) - 2; 
+	       maps := apply(toList((min M) .. (max M - 1)), i -> S#{w,i});
+	       maps = maps | apply(toList(#maps .. length M), i -> map(M_(i+d),M_i,0));
+	       --map wants to receive a list with maps for all the nonzero modules in M 
+	       --so we need to add in the zero maps
+	       f := map(M[d],M, maps);
+	       {f,d}
 	       )
 	   );
        
+       --list of pairs: maps M -> K and the corresponding degree
        allmaps = apply(allmaps, o -> (
 	       f:= o_0; 
-	       deg := o_1; 
-	       {makeMaps(f,M,K,deg),deg}));
+	       d := o_1; 
+	       themap := map(K[d],M,
+		   apply(toList(min M .. max M), i -> inducedMap(K_(i+d),M_i,f_i))
+		   );
+	       {themap,d}));
+       
        
        nullhomotopies = apply(allmaps, o -> (
 	       f := o_0; deg := o_1;
@@ -610,9 +608,12 @@ higherHomotopies(List,ComplexMap,ZZ) := (Igens,Pi,D) -> (
 	       if v != {} then S#{u,i} = S#{u,i} + (H#v * H#w)));
        
        allmaps = apply(e, w -> (
-	       deg := 2*sum(w) - 2; 
-	       premaps := apply(toList(min M .. (max M - 1)), i -> S#{w,i});
-	       makeMaps(M, premaps, deg)
+	       d := 2*sum(w) - 2; 
+	       maps := apply(toList((min M) .. (max M - 1)), i -> S#{w,i});
+	       maps = maps | apply(toList(#maps .. length M), i -> map(M_(i+d),M_i,0));
+	       --map wants to receive a list with maps for all the nonzero modules in M 
+	       --so we need to add in the zero maps
+	       map(M[d],M,maps)
 	       )
 	   );
        
