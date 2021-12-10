@@ -1353,7 +1353,7 @@ doc ///
             We can instead give an ideal $I$ in a ring $Q$, and compute a non-proxy small module over $Q/I$
         Example
             Q = QQ[x,y]
-        I = ideal(x^2,x*y)
+            I = ideal(x^2,x*y)
             nonProxySmall(I)
         Text
             If the given ring is a complete intersection, all modules are proxy small. 
