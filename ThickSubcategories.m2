@@ -1224,7 +1224,7 @@ doc ///
 
 doc ///
     Key
-    (restrict,Module,Ring)
+        (restrict,Module,Ring)
         (restrict,Module)
     Headline
         view the module as a module over an ambient ring
@@ -1330,7 +1330,7 @@ doc ///
 doc ///
     Key
         nonProxySmall
-    (nonProxySmall,Ring)
+    	(nonProxySmall,Ring)
         (nonProxySmall,Ideal)
     Headline
         if the given ring is not a ci, constructs a module that is not proxy small
