@@ -17,6 +17,8 @@ export {
     "LengthLimitGenerator",
     "FiniteLength",
     "ResidueField",
+    "RankVariety",
+    "Koszul",
     -- Methods
     "ghost",
     "coghost",
@@ -31,10 +33,10 @@ export {
     "restrict"
 }
 
+needsPackage "CompleteIntersectionResolutions"
 needsPackage "Complexes"
 needsPackage "Depth"
 needsPackage "MinimalPrimes"
-needsPackage "CompleteIntersectionResolutions"
 
 ---------------------------------------------------------------
 ---------------------------------------------------------------
@@ -259,23 +261,74 @@ isPerfect(Module) := Boolean => (M) -> (
 ---------------------------------------------------------------
 -- Compute the support variety of a complex
 ---------------------------------------------------------------
-supportVariety = method( TypicalValue => Ideal,
-                         Options => { FiniteLength => false } );
 
-supportVariety(Complex) := Ideal => opts -> (Y) -> (
-    if opts.FiniteLength then (
-        R := ring Y;
+
+--auxiliary functions
+
+mapwithvars = method()
+mapwithvars(List,Matrix,Ring) := Matrix => (k,Mat,S) -> (
+    mat := promote(Mat,S);
+    list2 := flatten entries vars S;
+    o := apply(pack(2,mingle(k_0,list2)), w -> (w_1)^(w_0));
+    product(o)*mat
+    )
+
+degreeij = method()
+degreeij(HashTable,List,Ring,HashTable) := Matrix => (L,degs,S,ranks) -> (
+    
+    i := degs_0;--starting point
+    j := degs_1;--ending point
+    
+    starting := rank(ranks#i);
+    ending := rank(ranks#j);
+    
+    if (i > (j+1)) then map(S^ending, S^starting,0)  --replaces the negative differentials with zero
+    else (
+	mykeys := select(keys L, 
+	    k -> (k_1 == i) and (2*sum(k_0) - 1 + k_1) == j);
+--	w := apply(mykeys, k -> {k,L#k});
+	sum(apply(mykeys, k -> mapwithvars(k,L#k,S)))
+   )
+)
+
+
+--support variety
+supportVariety = method( TypicalValue => Ideal,
+                         Options => { Strategy => RankVariety } );
+
+supportVariety(Complex) := Ideal => opts -> (X) -> (
+    if opts.Strategy === RankVariety then (
+	R := ring X;
+	I := ideal R;
+	Q := ring I;
+	Pi := resolutionMap(restrict(X,Q));
+	M := source Pi;
+	H := higherHomotopies(flatten entries gens I, Pi,floor((length M + 1)/2));
+	mu := numgens I;
+	a := getSymbol"a";
+	S := Q[a_1 .. a_mu];
+	T := S/promote(ideal vars Q,S);
+	odds := select(toList(min M .. max M), o -> odd(o));
+	evens := select(toList(min M .. max M), o -> even(o));
+	toeven := matrix table(evens, odds, (j,i) -> degreeij(H, {i,j}, S, M.module)) ** T;
+	toodd := matrix table(odds, evens, (j,i) -> degreeij(H, {i,j}, S, M.module)) ** T;
+    	return radical minors(rank ker toeven, toodd)
+	);
+    
+    if opts.Strategy === Koszul then (
+        R = ring X;
         k := complex(R^1/ideal vars R);
-        E := extKoszul(k,Y);
-        radical ann(E)
-    ) else (
-        E = extKoszul(Y,Y);
-        radical ann(E)
+        E := extKoszul(k,X);
+        return radical ann(E)
     )
 )
 
 supportVariety(Module) := Ideal => opts -> (M) -> (
-    supportVariety(complex(M), FiniteLength => opts.FiniteLength)
+    supportVariety(complex(M), Strategy => opts.Strategy)
+)
+
+supportVariety(Complex,Complex) := Ideal => opts -> (X,Y) -> (
+    if not(ring X == ring Y) then error "expected complexes over the same ring" else radical ann extKoszul(X,Y)
 )
 
 ---------------------------------------------------------------
@@ -490,13 +543,14 @@ restrict(Complex) := Complex => (C) -> (
 --given a key and a degree d
 --constructs the key for the codomain of a map of degree d starting at the given key
 compl = method()
-compl(ZZ,List,List) := (MaxSize,w,L) -> (
+compl(ZZ,List,List) := (MaxSize,u,L) -> (
     i := L_1;
     multideg := L_0; 
-    l := w - multideg; -- new multideg
-    if (((i + 2*sum(multideg) - 1) >= MaxSize) or ((i + 2*sum(w) - 2) >= MaxSize)) then {} else (
-    if any (l, o -> o<0) then {} else {l,i + 2*sum(multideg) - 1}
-    )
+    l := u - multideg; -- new multideg
+   
+    test := ((i + 2*sum(multideg) - 1) > MaxSize) or (i + 2*sum(u) - 1) > MaxSize or any(l, o -> o<0) or sum(l)==0;
+    
+    if test then {} else {l,i + 2*sum(multideg) - 1}
     )
 
 
@@ -504,136 +558,87 @@ compl(ZZ,List,List) := (MaxSize,w,L) -> (
 -- system of higher homotopies
 ---------------------------------------------------------------
 
-
 higherHomotopies = method()
+
 higherHomotopies(Complex) := X -> (
     R := ring X;
     I := ideal R;
     Q := ring I;
     Pi := resolutionMap(restrict(X,Q));
     M := source Pi;
-    higherHomotopies(flatten entries gens I, Pi,floor((length X + 1)/2))
+    higherHomotopies(flatten entries gens I, Pi,floor((length M + 1)/2))
     )
 
 higherHomotopies(Module) := M -> higherHomotopies(complex(M))
-
+    
 higherHomotopies(List,ComplexMap,ZZ) := (Igens,Pi,D) -> (
     Q := ring Igens_0;
     M := source Pi;
+    Y := target Pi;
+    K := cone(Pi)[1];
+    conemap := map(M,K,id_M | map(M,Y[1],0));
+--    mapfromMtoK := map(K,M, id_M || map(Y[1],M,0));
     N := #Igens;
-    K := ker Pi;
-    --fmaps: list of the maps M -> K given by multiplication by each generator
-    fmaps := apply(Igens, f -> 
-    map(K,M,apply(toList(min M .. max M), i -> inducedMap(K_i,M_i,f * id_(M_i)))));
+    
+    fmaps := apply(Igens, f -> map(K,M, f*id_M || map(Y[1],M,0)));
     gennullhoms := apply(fmaps, f -> complex nullhomotopy chainComplex f);
-    H := new MutableHashTable;
+    
+    H := new MutableHashTable;--H has maps with target M
+    Haux := new MutableHashTable;--Haux has maps with target K
+    
+    --setting up homotopies of degree 1 
     e := expo(N,1);
     
-    --setting up homotopies of degree 1
-    scan(flatten table(#e,length M, (i,j) -> {e_i,j}), 
-    k -> (
-        l := k_1 + 2*sum(k_0)-1;
-        H#k = inducedMap(M_l,K_l) * (gennullhoms_(position(k_0, o -> o==1)))_(k_1)));
+    scan(flatten table(e,toList(min M .. max M), (a,j) -> {a,j}), 
+	k -> (Haux#k = (gennullhoms_(position(k_0, o -> o==1)))_(k_1)));
+    
+    scan(flatten table(e,toList(min M .. max M), (a,j) -> {a,j}), 
+	k -> (H#k = conemap_(k_1+1) * (gennullhoms_(position(k_0, o -> o==1)))_(k_1)));
     
     S := new MutableHashTable;
     
     allmaps := {};
-    nullhomotopies := {};
-    
-    highD := floor((length M + 1)/2);
-    
-    lowD := max{2, D+1};     
+    nullhomotopies := {};   
     
     for d from 2 to D do (
-    e = expo(N,d);
-    --S is an auxiliary hashtable
-    S = new MutableHashTable from flatten table(
-        e, toList((min M) .. (max M - 1)), (w,i) -> ({w,i},map(M_(i+2*sum(w)-2),M_i,0)
-        )
-        );
-    
-    scan(keys H ** e, P -> (
-           w := P_0;
-           i := w_1;
-           u := P_1;
-           v := compl(length M,u,w);
-           if v != {} then S#{u,i} = S#{u,i} + (H#v * H#w)));
+	e = expo(N,d);
+	--S is an auxiliary hashtable
+	S = new MutableHashTable from flatten table(
+	    e, toList(min M .. max M), (w,i) -> ({w,i},map(K_(i+2*d-2),M_i,0))
+	    );
+	
+	scan(keys H ** e, P -> (
+		k := P_0;
+		i := k_1;
+		u := P_1;
+		v := compl(max M,u,k);
+		if v != {} then S#{u,i} = S#{u,i} + (Haux#v * H#k)));
        
        allmaps = apply(e, w -> (
-           d := 2*sum(w) - 2; 
-           maps := apply(toList((min M) .. (max M - 1)), i -> S#{w,i});
-           maps = maps | apply(toList(#maps .. length M), i -> map(M_(i+d),M_i,0));
-           --map wants to receive a list with maps for all the nonzero modules in M 
-           --so we need to add in the zero maps
-           f := map(M[d],M, maps);
-           {f,d}
+           maps := apply(toList((min M) .. (max M)), i -> - S#{w,i});
+           map(K[2*d-2], M, maps)
            )
-       );
-       
-       --list of pairs: maps M -> K and the corresponding degree
-       allmaps = apply(allmaps, o -> (
-           f:= o_0; 
-           d := o_1; 
-           themap := map(K[d],M,
-           apply(toList(min M .. max M), i -> inducedMap(K_(i+d),M_i,f_i))
-           );
-           {themap,d}));
-       
-       
-       nullhomotopies = apply(allmaps, o -> (
-           f := o_0; deg := o_1;
-           inducedMap(M[deg],K[deg]) * (complex nullhomotopy chainComplex f)
-         )
-     );
-
-       scan( toList(0 .. (#e -1)) ** toList(min M .. length M - 2*d + 2), W -> (
-           j := W_0;
-           i := W_1;
-           w := e_j;
-           H#{w,i} = (nullhomotopies_j)_i
-           )
-       )
-       );
+       );  
  
-    for d from lowD to highD do (
-    e = expo(N,d);
-    S = new MutableHashTable from flatten table(
-        e, toList((min M) .. (max M - 1)), (w,i) -> ({w,i},map(M_(i+2*sum(w)-2),M_i,0)));
-    
-    scan(keys H ** e, P -> (
-           w := P_0;
-           i := w_1;
-           u := P_1;
-           v := compl(length M,u,w);
-           if v != {} then S#{u,i} = S#{u,i} + (H#v * H#w)));
-       
-       allmaps = apply(e, w -> (
-           d := 2*sum(w) - 2; 
-           maps := apply(toList((min M) .. (max M - 1)), i -> S#{w,i});
-           maps = maps | apply(toList(#maps .. length M), i -> map(M_(i+d),M_i,0));
-           --map wants to receive a list with maps for all the nonzero modules in M 
-           --so we need to add in the zero maps
-           map(M[d],M,maps)
-           )
-       );
-       
-       nullhomotopies = apply(allmaps, f -> complex nullhomotopy chainComplex f);
+       nullhomotopies = apply(allmaps, o -> complex nullhomotopy chainComplex o);
 
-       scan( toList(0 .. (#e -1)) ** toList((min M)  .. length M - 2*d + 2), W -> (
+       scan( toList(0 .. (#e - 1)) ** toList(min M .. max M - 2*d + 2), W -> (
            j := W_0;
+	   w := e_j;
            i := W_1;
-           w := e_j;
-           H#{w,i} = (nullhomotopies_j)_i
+           Haux#{w,i} = (nullhomotopies_j)_i;
+           H#{w,i} = conemap_(i + 2*d - 1) * (nullhomotopies_j)_i	   
            )
-       )
        );
-   
-    
-   
+   );--end of for
+        
     e = (expo(N,0))_0;--making degree 0 stuff
-    scan(toList(min M .. max M), i -> H#{e,i} = M.dd_i);
+    scan(toList((min M + 1) .. max M), i -> H#{e,i} = M.dd_i);
+--    scan(toList((min M + 1) .. max M), i -> Haux#{e,i} = mapfromMtoK_(i-1) * M.dd_i);
     
-    hashTable pairs H)
+    hashTable pairs H
+);
+
 
 
 ---------------------------------------------------------------
@@ -1160,17 +1165,15 @@ doc ///
 doc ///
     Key
         FiniteLength
-        [supportVariety,FiniteLength]
         [isBuilt,FiniteLength]
     Headline
         simplify computation when the input has finite length homology
     Usage
-        supportVariety(..., FiniteLength => false)
+        isBuilt(..., FiniteLength => false)
     Description
         Text
             For a complex with finite length homology $X$ the support variety can be computed via the support of the ext module ${\rm Ext}(k,X)$ where $k$ is the residue field.
     SeeAlso
-        supportVariety
         isBuilt
 
 ///
