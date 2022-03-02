@@ -644,9 +644,13 @@ higherHomotopies(List,ComplexMap,ZZ) := (Igens,Pi,D) -> (
 ---------------------------------------------------------------
 -- complete ext over non-ci
 ---------------------------------------------------------------
-extKoszul = method( Options => { ResidueField => false } );
+extKoszul = method( TypicalValue => Module );
+    
+--Options => { ResidueField => false }
 
-extKoszul(Complex,Complex) := Module => opts -> (M,N) -> (
+extKoszul(Module,Module) := (M,N) -> extKoszul(complex(M), complex(N));
+    
+extKoszul(Complex,Complex) := (M,N) -> (
     B := ring M;
     if not(B === ring(N)) then error "expected complexes over the same ring";
     if not isCommutative B
@@ -675,18 +679,11 @@ extKoszul(Complex,Complex) := Module => opts -> (M,N) -> (
     
     if (M == 0 or N == 0) then return S^0;
     
-    if opts.ResidueField then (
-        C := koszul vars A;
-    ) else (
-        M' := restrict(M,A); -- homogeneous
-        assert isHomogeneous M'; -- is this necessary, that is is there a way that the construction could give a non-homogeneous module?    
-        C = resolution(M');
-        -- keys: {J,d} where J a list of integers of length c and d the degree of the source in C
-    );
-    
-    homotopies := higherHomotopies(C);
+    Pi := resolutionMap(restrict(M,A));
+    C := source Pi;
+    homotopies := higherHomotopies(f, Pi,floor((length C + 1)/2));
     -- Construct Cstar = (S \otimes_A C)^\natural
-    degreesC := sort select(keys C, i -> class i === ZZ);
+    degreesC := toList(min C .. max C);
 --     degreesC := toList(min(C)..max(C));
     Cstar := S^(apply(degreesC,i -> toSequence apply(degrees C_i, d -> prepend(i,d))));
     
@@ -724,7 +721,8 @@ extKoszul(Complex,Complex) := Module => opts -> (M,N) -> (
         )
     );
     
-    DeltaCmatrix := sum(apply(select(keys homotopies, i -> homotopies#i != 0), i -> prodX(i_0)*toS(makematrix(i,homotopies#i))));
+    DeltaCmatrix := sum(apply(select(keys homotopies, i -> homotopies#i != 0), 
+	    i -> prodX(i_0)*toS(makematrix(i,homotopies#i))));
     DeltaC := map( Cstar,
                   Cstar, 
                   transpose DeltaCmatrix,
@@ -736,13 +734,15 @@ extKoszul(Complex,Complex) := Module => opts -> (M,N) -> (
     Nmods := apply(degreesN, i -> tensor(S,toS,restrict(N_i,A))); -- take them from Nmatrix? Might be faster when N a complex
     Nmatrix := apply(Ndelta, f -> tensor(S,toS,restrict(f,A)));
     Nsize := apply(Nmods,numgens);
-    Ntable := table(#degreesN,#degreesN, (p,q) -> if (p == (q-1)) then Nmatrix_p else map(S^(Nsize_p),S^(Nsize_q),0));
+    Ntable := table(#degreesN,#degreesN, 
+	(p,q) -> if (p == (q-1)) then Nmatrix_p else map(S^(Nsize_p),S^(Nsize_q),0));
     
     DeltaNmatrix := matrixfromblocks Ntable;
     Ngraded := fold((a,b) -> a ++ b,Nmods);
     DeltaN := map(Ngraded,Ngraded,DeltaNmatrix);
     
-    SignIdCstar := diagonalMatrix flatten toList apply(pairs(ranksC), w -> if even(w_0) then apply(toList(1 .. w_1), o -> -1) else apply(toList(1 .. w_1), o -> 1));
+    SignIdCstar := diagonalMatrix flatten toList apply(pairs(ranksC), 
+	w -> if even(w_0) then apply(toList(1 .. w_1), o -> -1) else apply(toList(1 .. w_1), o -> 1));
 
     SignIdCstar = promote(SignIdCstar, S); 
     
