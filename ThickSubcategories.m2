@@ -154,6 +154,8 @@ level(Complex,Complex) := ZZ => opts -> (G,X) -> (
     -- Check that G and X are complexes over the same ring
     if not(ring G === ring X) then error "expected complexes over the same ring";
     
+    if (X == 0) then return 0; -- needed because resolution does not work for the zero complex
+    
     -- We need G to be a complex of free/projective modules to compute Ext
     rG := resolution(G, LengthLimit => opts.LengthLimitGenerator);
     -- We need X to be a complex of free/projective modules, so that any map from X is zero iff it is null homotopic
@@ -189,6 +191,8 @@ level(Complex,Complex) := ZZ => opts -> (G,X) -> (
 
 -- Level with respect to R
 level(Complex) := ZZ => opts -> (X) -> (
+    if (X == 0) then return 0; -- needed because resolution does not work for the zero complex
+    
     rX := resolution(X, LengthLimit => opts.LengthLimit);
     n := 0;
     f := id_(rX);
