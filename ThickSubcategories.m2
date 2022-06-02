@@ -64,7 +64,7 @@ ghost(Complex,Complex,ZZ) := ComplexMap => (G,X,n) -> (
         h := inducedMap(H_i,K)*map(K,Q,id_Q);
         
         -- get R^[-i] -> H from the jth component of Q
-        pickGenerator := (j) ->  map(H,(complex R^1)[-i],k -> if k==i then map(H_i,R^1,h*(id_Q)_{j}));
+        pickGenerator := (j) -> map(H,(complex R^1)[-i],k -> if k==i then map(H_i,R^1,h*(id_Q)_{j}));
         -- from R^1[-i] -> H get G[-i] -> X
         generatorToMorphism := (f) -> map(X,G[-i],(homomorphism f)[-i],Degree => 0);
         
@@ -122,7 +122,7 @@ coghost(Complex,Complex) := ComplexMap => (G,X) -> (
         h := inducedMap(H_i,K)*map(K,Q,id_Q);
         
         -- get R^[-i] -> H from the jth component of Q
-        pickGenerator := (j) ->  map(H,(complex R^1)[-i],k -> if k==i then map(H_i,R^1,h*(id_Q)_{j}));
+        pickGenerator := (j) -> map(H,(complex R^1)[-i],k -> if k==i then map(H_i,R^1,h*(id_Q)_{j}));
         -- from R^1[-i] -> H get X -> G[i]
         generatorToMorphism := (f) -> map(G[i],X,(homomorphism f),Degree => 0);
         
@@ -187,6 +187,8 @@ level(Complex,Complex) := ZZ => opts -> (G,X) -> (
 
 -- Level with respect to R
 level(Complex) := ZZ => opts -> (X) -> (
+    if (X == 0) then return 0; -- needed because resolution does not work for the zero complex
+    
     rX := resolution(X, LengthLimit => opts.LengthLimit);
     n := 0;
     f := id_(rX);
@@ -337,7 +339,7 @@ isBuilt(Complex,Module) := Boolean => opts -> (X,N) -> (
     isBuilt(X,complex N, FiniteLength => opts.FiniteLength)
 )
 
-isBuilt(Module,Complex) := Boolean =>  opts -> (M,G) -> (
+isBuilt(Module,Complex) := Boolean => opts -> (M,G) -> (
     isBuilt(complex M,G, FiniteLength => opts.FiniteLength)
 )
 
@@ -523,18 +525,24 @@ higherHomotopies(List,ComplexMap,ZZ) := (Igens,Pi,D) -> (
     N := #Igens;
     K := ker Pi;
     --fmaps: list of the maps M -> K given by multiplication by each generator
-    fmaps := apply(Igens, f -> 
-    map(K,M,apply(toList(min M .. max M), i -> inducedMap(K_i,M_i,f * id_(M_i)))));
+    fmaps := apply(Igens, f -> map(K,M,apply(toList(min M .. max M), i -> inducedMap(K_i,M_i,f * id_(M_i)))));
     gennullhoms := apply(fmaps, f -> complex nullhomotopy chainComplex f);
     H := new MutableHashTable;
-    e := expo(N,1);
     
-    --setting up homotopies of degree 1
-    scan(flatten table(#e,length M, (i,j) -> {e_i,j}), 
-    k -> (
-        l := k_1 + 2*sum(k_0)-1;
-        H#k = inducedMap(M_l,K_l) * (gennullhoms_(position(k_0, o -> o==1)))_(k_1)));
+    -- Homotopies of degree 0
+    e := (expo(N,0))_0;
+    scan(toList(min M .. max M), i -> H#{e,i} = M.dd_i);
     
+    -- Homotopies of degree 1
+    e = expo(N,1);
+    scan( flatten table(#e,length M, (i,j) -> {e_i,j}), 
+          k -> (
+              l := k_1 + 2*sum(k_0)-1;
+              H#k = inducedMap(M_l,K_l) * (gennullhoms_(position(k_0, o -> o==1)))_(k_1)
+        )
+    );
+    
+    -- Homotopies of degree >1
     S := new MutableHashTable;
     
     allmaps := {};
@@ -542,99 +550,94 @@ higherHomotopies(List,ComplexMap,ZZ) := (Igens,Pi,D) -> (
     
     highD := floor((length M + 1)/2);
     
-    lowD := max{2, D+1};     
+    lowD := max{2, D+1};
     
     for d from 2 to D do (
-    e = expo(N,d);
-    --S is an auxiliary hashtable
-    S = new MutableHashTable from flatten table(
-        e, toList((min M) .. (max M - 1)), (w,i) -> ({w,i},map(M_(i+2*sum(w)-2),M_i,0)
-        )
+        e = expo(N,d);
+        --S is an auxiliary hashtable
+        S = new MutableHashTable from flatten table( e, 
+                                                     toList((min M) .. (max M - 1)),
+                                                     (w,i) -> ({w,i},map(M_(i+2*sum(w)-2),M_i,0))
         );
-    
-    scan(keys H ** e, P -> (
-           w := P_0;
-           i := w_1;
-           u := P_1;
-           v := compl(length M,u,w);
-           if v != {} then S#{u,i} = S#{u,i} + (H#v * H#w)));
-       
-       allmaps = apply(e, w -> (
-           d := 2*sum(w) - 2; 
-           maps := apply(toList((min M) .. (max M - 1)), i -> S#{w,i});
-           maps = maps | apply(toList(#maps .. length M), i -> map(M_(i+d),M_i,0));
-           --map wants to receive a list with maps for all the nonzero modules in M 
-           --so we need to add in the zero maps
-           f := map(M[d],M, maps);
-           {f,d}
-           )
-       );
-       
-       --list of pairs: maps M -> K and the corresponding degree
-       allmaps = apply(allmaps, o -> (
-           f:= o_0; 
-           d := o_1; 
-           themap := map(K[d],M,
-           apply(toList(min M .. max M), i -> inducedMap(K_(i+d),M_i,f_i))
-           );
-           {themap,d}));
-       
-       
-       nullhomotopies = apply(allmaps, o -> (
-           f := o_0; deg := o_1;
-           inducedMap(M[deg],K[deg]) * (complex nullhomotopy chainComplex f)
-         )
-     );
+        
+        scan(keys H ** e, P -> (
+            w := P_0;
+            i := w_1;
+            u := P_1;
+            v := compl(length M,u,w);
+            if v != {} then S#{u,i} = S#{u,i} + (H#v * H#w)
+        ));
+        
+        allmaps = apply(e, w -> (
+            d := 2*sum(w) - 2; 
+            maps := apply(toList((min M) .. (max M - 1)), i -> S#{w,i});
+            maps = maps | apply(toList(#maps .. length M), i -> map(M_(i+d),M_i,0));
+            --map wants to receive a list with maps for all the nonzero modules in M 
+            --so we need to add in the zero maps
+            f := map(M[d],M, maps);
+            {f,d}
+        ));
+        
+        --list of pairs: maps M -> K and the corresponding degree
+        allmaps = apply(allmaps, o -> (
+            f:= o_0; 
+            d := o_1; 
+            themap := map( K[d],
+                           M,
+                           apply(toList(min M .. max M), i -> inducedMap(K_(i+d),M_i,f_i)));
+            {themap,d}
+        ));
+        
+        
+        nullhomotopies = apply(allmaps, o -> (
+            f := o_0; deg := o_1;
+            inducedMap(M[deg],K[deg]) * (complex nullhomotopy chainComplex f)
+            )
+        );
 
-       scan( toList(0 .. (#e -1)) ** toList(min M .. length M - 2*d + 2), W -> (
-           j := W_0;
-           i := W_1;
-           w := e_j;
-           H#{w,i} = (nullhomotopies_j)_i
-           )
-       )
+        scan(toList(0 .. (#e -1)) ** toList(min M .. length M - 2*d + 2), W -> (
+            j := W_0;
+            i := W_1;
+            w := e_j;
+            H#{w,i} = (nullhomotopies_j)_i
+        ))
        );
  
     for d from lowD to highD do (
-    e = expo(N,d);
-    S = new MutableHashTable from flatten table(
-        e, toList((min M) .. (max M - 1)), (w,i) -> ({w,i},map(M_(i+2*sum(w)-2),M_i,0)));
-    
-    scan(keys H ** e, P -> (
-           w := P_0;
-           i := w_1;
-           u := P_1;
-           v := compl(length M,u,w);
-           if v != {} then S#{u,i} = S#{u,i} + (H#v * H#w)));
-       
-       allmaps = apply(e, w -> (
-           d := 2*sum(w) - 2; 
-           maps := apply(toList((min M) .. (max M - 1)), i -> S#{w,i});
-           maps = maps | apply(toList(#maps .. length M), i -> map(M_(i+d),M_i,0));
-           --map wants to receive a list with maps for all the nonzero modules in M 
-           --so we need to add in the zero maps
-           map(M[d],M,maps)
-           )
-       );
-       
-       nullhomotopies = apply(allmaps, f -> complex nullhomotopy chainComplex f);
+        e = expo(N,d);
+        S = new MutableHashTable from flatten table( e, 
+                                                     toList((min M) .. (max M - 1)), 
+                                                     (w,i) -> ({w,i},map(M_(i+2*sum(w)-2),M_i,0)));
+        
+        scan(keys H ** e, P -> (
+            w := P_0;
+            i := w_1;
+            u := P_1;
+            v := compl(length M,u,w);
+            if v != {} then S#{u,i} = S#{u,i} + (H#v * H#w)
+        ));
+        
+        allmaps = apply(e, w -> (
+            d := 2*sum(w) - 2; 
+            maps := apply(toList((min M) .. (max M - 1)), i -> S#{w,i});
+            maps = maps | apply(toList(#maps .. length M), i -> map(M_(i+d),M_i,0));
+            --map wants to receive a list with maps for all the nonzero modules in M 
+            --so we need to add in the zero maps
+            map(M[d],M,maps)
+        ));
+        
+        nullhomotopies = apply(allmaps, f -> complex nullhomotopy chainComplex f);
 
-       scan( toList(0 .. (#e -1)) ** toList((min M)  .. length M - 2*d + 2), W -> (
-           j := W_0;
-           i := W_1;
-           w := e_j;
-           H#{w,i} = (nullhomotopies_j)_i
-           )
-       )
-       );
+        scan( toList(0 .. (#e -1)) ** toList((min M) .. length M - 2*d + 2), W -> (
+            j := W_0;
+            i := W_1;
+            w := e_j;
+            H#{w,i} = (nullhomotopies_j)_i
+        ))
+    );
    
-    
-   
-    e = (expo(N,0))_0;--making degree 0 stuff
-    scan(toList(min M .. max M), i -> H#{e,i} = M.dd_i);
-    
-    hashTable pairs H)
-
+    hashTable pairs H
+)
 
 ---------------------------------------------------------------
 -- complete ext over non-ci
@@ -662,8 +665,8 @@ extKoszul(Complex,Complex) := Module => opts -> (M,N) -> (
     K := coefficientRing A;
     X := getSymbol "X";
     S := K(monoid[X_1 .. X_c, toSequence gens A,
-           Degrees => { apply(0 .. c-1, i -> prepend(-2, - degree f_i)),
-                        apply(0 .. n-1, j -> prepend( 0,   degree A_j))},
+           Degrees => { apply(0 .. c-1, i -> prepend(-2, -degree f_i)),
+                        apply(0 .. n-1, j -> prepend( 0, degree A_j))},
            Heft => {-2,1} ]);
     -- Natural inclusion A -> S
     toS := map(S,A,apply(toList(c .. c+n-1), i -> S_i),DegreeMap => prepend_0);
@@ -674,7 +677,7 @@ extKoszul(Complex,Complex) := Module => opts -> (M,N) -> (
         C := koszul vars A;
     ) else (
         M' := restrict(M,A); -- homogeneous
-        assert isHomogeneous M'; -- is this necessary, that is is there a way that the construction could give a non-homogeneous module?    
+        assert isHomogeneous M'; -- is this necessary, that is is there a way that the construction could give a non-homogeneous module?
         C = resolution(M');
         -- keys: {J,d} where J a list of integers of length c and d the degree of the source in C
     );
@@ -721,9 +724,9 @@ extKoszul(Complex,Complex) := Module => opts -> (M,N) -> (
     
     DeltaCmatrix := sum(apply(select(keys homotopies, i -> homotopies#i != 0), i -> prodX(i_0)*toS(makematrix(i,homotopies#i))));
     DeltaC := map( Cstar,
-                  Cstar, 
-                  transpose DeltaCmatrix,
-                  Degree => { -1, degreeLength A:0 });
+                   Cstar, 
+                   transpose DeltaCmatrix,
+                   Degree => { -1, degreeLength A:0 });
 
     -- Rewrite N as a graded S-module D with a degree -1 map
     degreesN := toList((min N) .. (max N));
@@ -1330,7 +1333,7 @@ doc ///
 doc ///
     Key
         nonProxySmall
-    	(nonProxySmall,Ring)
+        (nonProxySmall,Ring)
         (nonProxySmall,Ideal)
     Headline
         if the given ring is not a ci, constructs a module that is not proxy small
