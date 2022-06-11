@@ -404,21 +404,12 @@ isBuilt(Module,Complex) := Boolean =>  opts -> (M,G) -> (
 
 restrict = method();
 
+-- restrict from R = Q/I to Q
 restrict(Module) := Module => (M) -> (
     R := ring M;
     
-    p := presentation R;
-    Q := ring p;
-    
-    if (M == 0) then return Q^0;
-    
-    I := trim ideal p;
-    
-    pM := lift(presentation M,Q);
-    -- Both of the following work, but the second is more efficient.
---     cokernel ( pM | p ** id_(target pM) )
-    cokernel ( (Q^1/I) ** pM )
-)
+    return restrict(M,ambient R);
+);
 
 restrict(Module,Ring) := Module => (M,Q) -> (
     R := ring M;
@@ -426,16 +417,35 @@ restrict(Module,Ring) := Module => (M,Q) -> (
     if (R === Q) then return M;
     if (M == 0) then return Q^0;
     
-    if not isQuotientOf(Q,R) then error "expected ring of module to be a quotient of second input";
+    if (ambient R === Q) then (
+        I := kernel(map(R,Q,flatten entries vars R));
+        
+        pM := lift(presentation M,Q);
+        return cokernel ( (Q^1/I) ** pM );
+    );
     
-    I := kernel(map(R,Q,flatten entries vars R));
+    -- if R is constructed from Q by also adjoining variables
+    -- we construct: A = Q[mons] and B = A/I = R
+    B := flattenRingOver(R,Q);
+    I = image presentation B;
+    A := ring I;
+    phi := map(B,R); -- isomorphism by construction
+    mons := gens(A,CoefficientRing => Q);
     
-    pM := lift(presentation M,Q);
---     cokernel ( pM | p ** id_(target pM) )
-    cokernel ( (Q^1/I) ** pM )
+    -- M viewed as a module over A
+    pM = lift(presentation tensor(phi,M),A);
+    MA := cokernel ( (A^1/I) ** pM );
+    
+    b := basis(MA,Variables => mons,SourceRing => Q);
+    return coimage b
 )
 
--- This can be simplified, especially at the end. 
+restrict(Matrix) := Matrix => (f) -> (
+    R := ring f;
+    
+    return restrict(f,ambient R);
+);
+
 restrict(Matrix,Ring) := Matrix => (f,Q) -> (
     M := f.source;
     N := f.target;
@@ -443,101 +453,144 @@ restrict(Matrix,Ring) := Matrix => (f,Q) -> (
     
     if (R === Q) then return f;
     
-    if not isQuotientOf(Q,R) then error "expected ring of module to be a quotient of second input";
-    
-    -- R-complexes containing the modules and their presentation
-    F := cone(resolutionMap(complex(M),LengthLimit=>1));
-    G := cone(resolutionMap(complex(N),LengthLimit=>1));
-    
-    -- extend the map to the presentation of the modules
-    g := extend(G,F,map(G_0,F_0,f));
-    
-    -- lift the ring
-    I := kernel(map(R,Q,flatten entries vars R));
-    
-    -- lift the presenentation
-    pM := lift(F.dd_2,Q);
-    pN := lift(G.dd_2,Q);
-    
-    -- add relations of M to the lifted presentation
-    -- both work, but second more efficient
---     lF := complex({pM | p ** id_(target pM)});
-    lF := complex({(Q^1/I) ** pM});
-    
-    -- compose lifted presentation of N with the surjection Q ->> R
-    -- both work, but second more efficient
---     lG := complex({(inducedMap(cokernel p,p.target) ** id_(target pN)) * pN});
-    lG := complex({(Q^1/I) ** pN});
-    
-    -- create lifted/induced complex map g: lF -> lG only in degree 0
-    h := map(lG,lF,hashTable{0 => map(lG_0,lF_0,(Q^1/I) ** lift(g_1,Q),Degree => degree g_1)});
+    if (ambient R === Q) then (
+        -- R-complexes containing the modules and their presentation
+        F := cone(resolutionMap(complex(M),LengthLimit=>1));
+        G := cone(resolutionMap(complex(N),LengthLimit=>1));
         
-    HH_0 h
+        -- extend the map to the presentation of the modules
+        g := extend(G,F,map(G_0,F_0,f));
+        
+        -- lift the ring
+        I := kernel(map(R,Q,flatten entries vars R));
+        
+        -- add relations of R to the presentations
+        lF := complex({(Q^1/I) ** lift(F.dd_2,Q)});
+        lG := complex({(Q^1/I) ** lift(G.dd_2,Q)});
+        
+        -- create lifted/induced complex map lF -> lG only in degree 0
+        h := map(lG,lF,hashTable{0 => map(lG_0,lF_0,(Q^1/I) ** lift(g_1,Q),Degree => degree g_1)});
+        
+        return HH_0 h
+    );
+    
+    -- if R is constructed from Q by also adjoining variables
+    -- we construct: A = Q[mons] and B = A/I = R
+    B := flattenRingOver(R,Q);
+    I = image presentation B;
+    A := ring I;
+    phi := map(B,R); -- isomorphism by construction
+    mons := gens(A,CoefficientRing => Q);
+    
+    -- B-complexes containing the modules and their presentation
+    F = cone(resolutionMap(complex(tensor(phi,M)),LengthLimit=>1));
+    G = cone(resolutionMap(complex(tensor(phi,N)),LengthLimit=>1));
+    -- extend the map to the presentation of the modules
+    g = extend(G,F,map(G_0,F_0,tensor(phi,f)));
+    
+    -- lift to presentation over A
+    lF = complex({(A^1/I) ** lift(F.dd_2,A)});
+    lG = complex({(A^1/I) ** lift(G.dd_2,A)});
+    -- create lifted/induced complex map g: lF -> lG only in degree 0
+    h = map(lG,lF,hashTable{0 => map(lG_0,lF_0,(A^1/I) ** lift(g_1,A),Degree => degree g_1)});
+    -- map over A
+    fA := HH_0 h;
+    
+    -- basis of target/source over Q
+    bM := basis(fA.source,Variables => mons,SourceRing => Q);
+    bN := basis(fA.target,Variables => mons,SourceRing => Q);
+    
+    -- create matrix over Q using fA and basis bM and bN
+    L :=  transpose entries(fA*bM);
+    Lcoeff := apply(L,c -> (
+        flatten apply(toList(0..#c-1),n -> (
+            coeff := coefficients(c_n,Monomials => delete(0_A,(entries bN)_n));
+            apply(flatten entries coeff#1,d -> lift(d,Q))
+        ))
+    ));
+    
+    -- map M -> N over Q
+    return map(coimage bN,coimage bM,transpose Lcoeff)
 )
 
--- This can be simplified, especially at the end. 
-restrict(Matrix) := Matrix => (f) -> (
-    M := f.source;
-    N := f.target;
+restrict(Complex) := Complex => (X) -> (
+    R := ring X;
+    
+    return restrict(X,ambient R);
+);
+
+restrict(Complex,Ring) := Complex => (X,Q) -> (
+    a := min X;
+    b := max X;
+    
+    -- If the complex is concentrated in one degree, just restrict that module
+    if (a == b) then return complex(restrict(X_a,Q),Base => a);
+    
+    -- otherwise lift all differentials
+    L := apply(toList(a+1..b),i -> restrict(X.dd_i,Q));
+    complex(L,Base => a)
+)
+
+restrict(ComplexMap) := ComplexMap => (f) -> (
     R := ring f;
     
-    -- R-complexes containing the modules and their presentation
-    F := cone(resolutionMap(complex(M),LengthLimit=>1));
-    G := cone(resolutionMap(complex(N),LengthLimit=>1));
+    return restrict(f,ambient R);
+);
+
+restrict(ComplexMap,Ring) := ComplexMap => (f,Q) -> (
+    X := f.source;
+    Y := f.target;
     
-    -- extend the map to the presentation of the modules
-    g := extend(G,F,map(G_0,F_0,f));
+    lo := max(min X,min Y);
+    hi := min(max X,max Y);
     
-    -- lift the ring
-    p := presentation R;
-    Q := ring p;
-    I := trim ideal p;
+    rX := restrict(X,Q);
+    rY := restrict(Y,Q);
     
-    -- lift the presenentation
-    pM := lift(F.dd_2,Q);
-    pN := lift(G.dd_2,Q);
-    
-    -- add relations of M to the lifted presentation
-    -- both work, but last more efficient
---     lF := complex({pM | p ** id_(target pM)});
-    lF := complex({(Q^1/I) ** pM});
-    
-    -- compose lifted presentation of N with the surjection Q ->> R
-    -- both work, but last more efficient
---     lG := complex({(inducedMap(cokernel p,p.target) ** id_(target pN)) * pN});
-    lG := complex({(Q^1/I) ** pN});
-    
-    -- create lifted/induced complex map g: lF -> lG only in degree 0
-    h := map(lG,lF,hashTable{0 => map(lG_0,lF_0,(Q^1/I) ** lift(g_1,Q),Degree => degree g_1)});
-        
-    HH_0 h
+    map(rY,rX,hashTable apply(toList(lo..hi),i -> {i,restrict(f_i,Q)}))
 )
 
-restrict(Complex,Ring) := Complex => (C,Q) -> (
-    a := min C;
-    b := max C;
+flattenRingOver = method();
+flattenRingOver(Ring,Ring) := Ring => (B,A) -> (
+    -- Create list of all intermediate rings.
+    rngs := append(B.baseRings,B);
+    i := position(rngs,R -> R === A);
+    if i === null then error "Expected B to be constructed from A";
+    rngs = drop(rngs,i);
     
-    -- If the complex is concentrated in one degree, just restrict that module
-    if (a == b) then return complex(restrict(C_a,Q),Base => a);
+    -- some help functions
+    degreeInRng := (var,rng) -> degree rng_(baseName var);
+    pairLists := (L1,L2) -> (
+        if (#L1 != #L2) then error "Expected lists of the same length";
+        apply(pack(mingle(L1,L2),2),toSequence)
+    );
     
-    -- otherwise lift all differentials
-    L := apply(toList(a+1..b),i -> restrict(C.dd_i,Q));
-    complex(L,Base => a)
-)
-
-restrict(Complex) := Complex => (C) -> (
-    a := min C;
-    b := max C;
+    -- monoid adjoint in each step compared to the next
+    mons := apply(pairLists(drop(rngs,-1),drop(rngs,1)),(R,S) -> (
+        if isPolynomialRing S then ( -- variables
+            if not (coefficientRing S === R) then error "Expected the coefficient ring to be the previous ring"; -- I don't think this can happen, but just to be save
+            monoid S
+        ) else (
+            monoid {}
+        )
+    ));
     
-    -- If the complex is concentrated in one degree, just restrict that module
-    if (a == b) then return complex(restrict(C_a),Base => a);
+    -- tensor of all monoids
+    mon := fold(mons,monoid {},(a,b) -> 
+        tensor(a,b,
+            Join => false,
+            Degrees => join(apply(vars a,v -> degreeInRng(v,B)),apply(vars b,v -> degreeInRng(v,B)))
+        )
+    );
     
-    -- otherwise lift all differentials
-    L := apply(toList(a+1..b),i -> restrict(C.dd_i));
-    complex(L,Base => a)
-)
-
-
+    -- map A[..] ->> B
+    --Q := if vars mon === {} then first rngs else (first rngs) mon;
+    Q := (first rngs) mon;
+    f := map((last rngs),Q);
+    I := ker f;
+    
+    Q/I
+);
 
 ---------------------------------------------------------------
 -- auxiliary functions for homotopies
@@ -1234,7 +1287,7 @@ doc ///
         (restrict,Module,Ring)
         (restrict,Module)
     Headline
-        view the module as a module over an ambient ring
+        view the module as a module over another ring
     Usage
         restrict(M)
         restrict(M,Q)
@@ -1243,7 +1296,7 @@ doc ///
         Q:Ring
     Outputs
         :Module
-            over Q or the polynomial ring
+            over Q (or the ambient polynomial ring)
     Description
         Text
             When no ring is given, the module is lifted to the ambient polynomial ring of the ring of the module. 
@@ -1251,11 +1304,18 @@ doc ///
             R = QQ[x]/ideal(x^2);
             M = R^1/ideal(x);
             restrict M
+        Text
+            When a ring is given, the module is lifted to that ring. This only works, when the module is finitely generated over that ring. 
         Example
             Q = QQ[x]/ideal(x^3);
             R = Q/ideal(x^2);
             M = R^1/ideal(x);
             restrict(M,Q)
+        Example
+            Q = QQ[x];
+            R = Q[y];
+            M = R^1/ideal(y^2);
+            restrict(R^1/ideal(y^2),Q)
 ///
 
 doc ///
@@ -1263,7 +1323,7 @@ doc ///
         (restrict,Matrix,Ring)
         (restrict,Matrix)
     Headline
-        view the map as a map over an ambient ring
+        view the map as a map over another ring
     Usage
         restrict(f)
         restrict(f,Q)
@@ -1272,7 +1332,7 @@ doc ///
         Q:Ring
     Outputs
         :Matrix
-            over Q or the polynomial ring
+            over Q (or the ambient polynomial ring)
     Description
         Text
             When no ring is given, the map is lifted to the ambient polynomial ring of the ring of the map. 
@@ -1300,7 +1360,7 @@ doc ///
         (restrict,Complex,Ring)
         (restrict,Complex)
     Headline
-        view the complex as a complex over an ambient ring
+        view the complex as a complex over another ring
     Usage
         restrict(C)
         restrict(C,Q)
@@ -1309,7 +1369,7 @@ doc ///
         Q:Ring
     Outputs
         :Complex
-            over Q or the polynomial ring
+            over Q (or the ambient polynomial ring)
     Description
         Text
             When no ring is given, the complex is lifted to the ambient polynomial ring of the ring of the complex. 
