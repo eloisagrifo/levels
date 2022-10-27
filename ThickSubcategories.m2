@@ -1047,7 +1047,7 @@ doc ///
             level(M)
         
         Text
-            When the input consists of two complexes (or modules or one complex and one module), then it computes the level of the first complex with respect to the second. 
+            When the input consists of two complexes (or modules or one complex and one module), then it computes the level of the second complex with respect to the first. 
         Example
             R = QQ[x]
             M = R^1/ideal(x)
