@@ -270,15 +270,17 @@ isPerfect(Module) := Boolean => (M) -> (
 --auxiliary functions
 
 mapwithvars = method()
-mapwithvars(List,Matrix,Ring) := Matrix => (k,Mat,S) -> (
-    mat := promote(Mat,S);
-    list2 := flatten entries vars S;
+mapwithvars(List,Matrix,RingMap) := Matrix => (k,Mat,QtoS) -> (
+    mat := QtoS ** Mat;
+    S := target QtoS;
+    Q := source QtoS;
+    list2 := take(S_*,#Q_* - #S_*);
     o := apply(pack(2,mingle(k_0,list2)), w -> (w_1)^(w_0));
     product(o)*mat
     )
 
 degreeij = method()
-degreeij(HashTable,List,Ring,HashTable) := Matrix => (L,degs,S,ranks) -> (
+degreeij(HashTable,List,RingMap,HashTable) := Matrix => (L,degs,QtoS,ranks) -> (
     
     i := degs_0;--starting point
     j := degs_1;--ending point
@@ -286,12 +288,14 @@ degreeij(HashTable,List,Ring,HashTable) := Matrix => (L,degs,S,ranks) -> (
     starting := rank(ranks#i);
     ending := rank(ranks#j);
     
+    S := target QtoS;
+    
     if (i > (j+1)) then map(S^ending, S^starting,0)  --replaces the negative differentials with zero
     else (
 	mykeys := select(keys L, 
 	    k -> (k_1 == i) and (2*sum(k_0) - 1 + k_1) == j);
 --	w := apply(mykeys, k -> {k,L#k});
-	sum(apply(mykeys, k -> mapwithvars(k,L#k,S)))
+	sum(apply(mykeys, k -> mapwithvars(k,L#k,QtoS)))
    )
 )
 
@@ -305,24 +309,36 @@ supportVariety(Complex) := Ideal => opts -> (X) -> (
 	R := ring X;
 	I := ideal R;
 	Q := ring I;
+	k := coefficientRing Q;
 	Pi := resolutionMap(restrict(X,Q));
 	M := source Pi;
 	H := higherHomotopies(flatten entries gens I, Pi,floor((length M + 1)/2));
 	mu := numgens I;
-	a := getSymbol"a";
-	S := Q[a_1 .. a_mu];
-	T := S/promote(ideal vars Q,S);
+	Qvars := Q_*;
+	a := local a;
+	S := k(monoid[(Qvars | toList(a_1..a_mu))]);
+	--Produces a polynomial ring with twice as many variables as R.  
+	--The peculiar notation in the previous two lines
+	--is required to ensure that the variables of S are hidden from the user.
+	--In particular, the variables in Q_* are
+	--still recognized as variables of Q and not S, 
+	--and the code will not break if the variables in Q happen to be called
+	--old bad code:
+--	a := getSymbol"a";
+--	S := Q[a_1 .. a_mu];
+    	QtoS := map(S,Q,drop(S_*,-mu));
+	T := S/ideal drop(S_*,-mu);
 	odds := select(toList(min M .. max M), o -> odd(o));
 	evens := select(toList(min M .. max M), o -> even(o));
-	toeven := matrix table(evens, odds, (j,i) -> degreeij(H, {i,j}, S, M.module)) ** T;
-	toodd := matrix table(odds, evens, (j,i) -> degreeij(H, {i,j}, S, M.module)) ** T;
+	toeven := matrix table(evens, odds, (j,i) -> degreeij(H, {i,j}, QtoS, M.module)) ** T;
+	toodd := matrix table(odds, evens, (j,i) -> degreeij(H, {i,j}, QtoS, M.module)) ** T;
     	return radical minors(rank ker toeven, toodd)
 	);
     
     if opts.Strategy === Koszul then (
         R = ring X;
-        k := complex(R^1/ideal vars R);
-        E := extKoszul(k,X);
+        K := complex(R^1/ideal vars R);
+        E := extKoszul(K,X);
         return radical ann(E)
     )
 )
