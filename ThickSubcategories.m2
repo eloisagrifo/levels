@@ -18,6 +18,7 @@ export {
     "FiniteLength",
     "ResidueField",
     "RankVariety",
+    "RankVarietyFast",
     "Koszul",
     -- Methods
     "ghost",
@@ -30,13 +31,15 @@ export {
     "extKoszul",
     "higherHomotopies",
 --    "findgs",
-    "restrict"
+    "restrict",
+    "exts"
 }
 
 needsPackage "CompleteIntersectionResolutions"
 needsPackage "Complexes"
 needsPackage "Depth"
 needsPackage "MinimalPrimes"
+needsPackage "FastMinors"
 
 ---------------------------------------------------------------
 ---------------------------------------------------------------
@@ -300,9 +303,48 @@ degreeij(HashTable,List,RingMap,HashTable) := Matrix => (L,degs,QtoS,ranks) -> (
 )
 
 
+
+
+exts = method( );
+
+exts(Module) := List => Y -> (
+	X := complex(Y);
+	R := ring X;
+	I := ideal R;
+	Q := ring I;
+	k := coefficientRing Q;
+	Pi := resolutionMap(restrict(X,Q));
+	M := source Pi;
+	H := higherHomotopies(flatten entries gens I, Pi,floor((length M + 1)/2));
+	mu := numgens I;
+	Qvars := Q_*;
+	a := local a;
+	S := k(monoid[(Qvars | toList(a_1..a_mu))]);
+	--Produces a polynomial ring with twice as many variables as R.  
+	--The peculiar notation in the previous two lines
+	--is required to ensure that the variables of S are hidden from the user.
+	--In particular, the variables in Q_* are
+	--still recognized as variables of Q and not S, 
+	--and the code will not break if the variables in Q happen to be called
+	--old bad code:
+--	a := getSymbol"a";
+--	S := Q[a_1 .. a_mu];
+    	QtoS := map(S,Q,drop(S_*,-mu));
+	T := S/ideal drop(S_*,-mu);
+	odds := select(toList(min M .. max M), o -> odd(o));
+	evens := select(toList(min M .. max M), o -> even(o));
+	toeven := matrix table(evens, odds, (j,i) -> degreeij(H, {i,j}, QtoS, M.module)) ** T;
+	toodd := matrix table(odds, evens, (j,i) -> degreeij(H, {i,j}, QtoS, M.module)) ** T;
+    	return {toeven,toodd}
+	)
+
+
+
+
+
 --support variety
 supportVariety = method( TypicalValue => Ideal,
-                         Options => { Strategy => RankVariety } );
+                         Options => { Strategy => RankVarietyFast } );
 
 supportVariety(Complex) := Ideal => opts -> (X) -> (
     if opts.Strategy === RankVariety then (
@@ -332,8 +374,45 @@ supportVariety(Complex) := Ideal => opts -> (X) -> (
 	evens := select(toList(min M .. max M), o -> even(o));
 	toeven := matrix table(evens, odds, (j,i) -> degreeij(H, {i,j}, QtoS, M.module)) ** T;
 	toodd := matrix table(odds, evens, (j,i) -> degreeij(H, {i,j}, QtoS, M.module)) ** T;
-    	return radical minors(rank ker toeven, toodd)
+    	toodd = compress toodd;
+	return radical minors(rank ker toeven, toodd)
 	);
+
+    if opts.Strategy === RankVarietyFast then (
+	R = ring X;
+	I = ideal R;
+	Q = ring I;
+	k = coefficientRing Q;
+	Pi = resolutionMap(restrict(X,Q));
+	M = source Pi;
+	H = higherHomotopies(flatten entries gens I, Pi,floor((length M + 1)/2));
+	mu = numgens I;
+	Qvars = Q_*;
+	a = local a;
+	S = k(monoid[(Qvars | toList(a_1..a_mu))]);
+	--Produces a polynomial ring with twice as many variables as R.  
+	--The peculiar notation in the previous two lines
+	--is required to ensure that the variables of S are hidden from the user.
+	--In particular, the variables in Q_* are
+	--still recognized as variables of Q and not S, 
+	--and the code will not break if the variables in Q happen to be called
+	--old bad code:
+--	a := getSymbol"a";
+--	S := Q[a_1 .. a_mu];
+    	QtoS = map(S,Q,drop(S_*,-mu));
+	T = S/ideal drop(S_*,-mu);
+	odds = select(toList(min M .. max M), o -> odd(o));
+	evens = select(toList(min M .. max M), o -> even(o));
+	toeven = matrix table(evens, odds, (j,i) -> degreeij(H, {i,j}, QtoS, M.module)) ** T;
+	toodd = matrix table(odds, evens, (j,i) -> degreeij(H, {i,j}, QtoS, M.module)) ** T;
+    	r := rank ker toeven;
+	toodd = compress toodd;
+	toodd = transpose compress transpose toodd;
+	N := binomial(rank source toodd,r)*binomial(rank target toodd,r);
+	if (100000 > 0.01*N) and (0.01*N > 10000) then N = ceiling(0.01*N) else N = min(N,2000);
+    	return ideal mingens chooseGoodMinors(N,r,toodd)
+	);
+
     
     if opts.Strategy === Koszul then (
         R = ring X;
