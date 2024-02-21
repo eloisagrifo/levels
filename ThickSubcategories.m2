@@ -30,6 +30,7 @@ export {
     "nonProxySmall",
     "extKoszul",
     "higherHomotopies",
+    "rightApproximation",
 --    "findgs",
     "restrict",
     "exts"
@@ -48,63 +49,128 @@ needsPackage "FastMinors"
 ---------------------------------------------------------------
 
 ---------------------------------------------------------------
--- Create the G-ghost map associated to the right G-approximation
+-- Construct a right G-approximation
 ---------------------------------------------------------------
-ghost = method( TypicalValue => ComplexMap );
+rightApproximation = method( TypicalValue => ComplexMap );
 
--- Creates a map with source X that is G-ghost in degrees <= n
-ghost(Complex,Complex,ZZ) := ComplexMap => (G,X,n) -> (
-    -- Input: G needs to be a complex of projective modules
+rightApproximation(Complex,Complex,ZZ) := ComplexMap => (G,X,n) -> (
+    -- Input: G needs to be a complex of projective or free modules
     -- Check that G and X are complexes over the same ring
     R := ring G;
     if not(R === ring X) then error "expected complexes over the same ring";
     
-    H := Hom(G,X);
+    -- JL: This is overkill, we only need the degree 0 piece, as well as the maps (to and) from 0
+    -- The Hom-sets in D(Mod(R)) are the homology of H
+    H := Hom(G[-n],X);
     
-    -- Collect the generators of H in the form G[-i] -> X
-    generatorsInDegree := (i) -> (
-        K := ker H.dd_i;
-        Q := cover K;
-        -- induced module map Q -> H_i
-        h := inducedMap(H_i,K)*map(K,Q,id_Q);
-        
-        -- get R^[-i] -> H from the jth component of Q
-        pickGenerator := (j) ->  map(H,(complex R^1)[-i],k -> if k==i then map(H_i,R^1,h*(id_Q)_{j}));
-        -- from R^1[-i] -> H get G[-i] -> X
-        generatorToMorphism := (f) -> map(X,G[-i],(homomorphism f)[-i],Degree => 0);
-        
-        apply(toList(0..(rank Q-1)),j -> generatorToMorphism(pickGenerator j))
-    );
+    -- Collect the generators of H_0(H), they are maps G[-n] -> X
+    -- JL: There are two ways to compute them, via the homology or the kernel. Need to run more test to see which is more efficient.
+    -- Using the kernel
+    K := trim ker H.dd_0;
+    Q := cover K;
+    h := inducedMap(H_0,K)*map(K,Q,id_Q);
     
-    L := flatten apply(toList((min H)..n),generatorsInDegree);
+    -- Using the homology
+    -- K := trim ker H.dd_0;
+    -- L := trim HH_0 H;
+    -- Q := cover L;
+    -- h := inducedMap(H_0,K) * (map(L,Q,id_Q) // inducedMap(L,K));
     
-    f := fold((a,b) -> a | b,L);
-    canonicalMap(cone(f),X)
+    -- for each generator of Q pick the corresponding map G[-n] -> X
+    generatorToMorphism := (j) -> homomorphism(map(H,(complex R^1),k -> if k==0 then map(H_0,R^1,h*Q_{j})));
+    
+    -- Combine all the maps G[-n] -> X
+    return fold((a,b) -> a | b,map(X,G[-n],0),apply(toList(0..(rank Q-1)),j -> generatorToMorphism(j)))
+)
+
+-- Creates a right R-approximation
+rightApproximation(Complex,ZZ) := ComplexMap => (X,n) -> (
+    R := ring X;
+    
+    return map(X,complex(R^1,Base => n), k -> if k == 0 then inducedMap(X_n,ker X.dd_n) * coverMap ker X.dd_n)
+)
+
+---------------------------------------------------------------
+-- Construct a left G-approximation
+---------------------------------------------------------------
+leftApproximation = method( TypicalValue => ComplexMap );
+
+-- JL: Basically the same code as for rightApproximation, make an auxiliary method?
+leftApproximation(Complex,Complex,ZZ) := ComplexMap => (G,X,n) -> (
+    -- Input: X needs to be a complex of projective or free modules
+    -- Check that G and X are complexes over the same ring
+    R := ring G;
+    if not(R === ring X) then error "expected complexes over the same ring";
+    
+    -- JL: This is overkill, we only need the degree 0 piece, as well as the maps (to and) from 0
+    -- The Hom-sets in D(Mod(R)) are the homology of H
+    H := Hom(X,G[-n]);
+    
+    -- Collect the generators of H_0(H), they are maps G[-n] -> X
+    -- JL: There are two ways to compute them, via the homology or the kernel. Need to run more test to see which is more efficient.
+    -- Using the kernel
+    K := trim ker H.dd_0;
+    Q := cover K;
+    h := inducedMap(H_0,K)*map(K,Q,id_Q);
+    
+    -- Using the homology
+    -- K := trim ker H.dd_0;
+    -- L := trim HH_0 H;
+    -- Q := cover L;
+    -- h := inducedMap(H_0,K) * (map(L,Q,id_Q) // inducedMap(L,K));
+    
+    -- for each generator of Q pick the corresponding map X -> G[-n]
+    generatorToMorphism := (j) -> homomorphism(map(H,(complex R^1),k -> if k==0 then map(H_0,R^1,h*Q_{j})));
+    
+    -- Combine all the maps X -> G[-n]
+    return fold((a,b) -> a || b,map(G[-n],X,0),apply(toList(0..(rank Q-1)),j -> generatorToMorphism(j)))
+)
+
+---------------------------------------------------------------
+-- Create the G-ghost map associated to the right G-approximation
+---------------------------------------------------------------
+ghost = method( TypicalValue => ComplexMap );
+
+-- Creates a map f with source X such that Hom(G[-n],f) = 0
+ghost(Complex,Complex,ZZ) := ComplexMap => (G,X,n) -> (
+    -- Input: G needs to be a complex of projective or free modules
+    
+    f := rightApproximation(G,X,n);
+    
+    return canonicalMap(cone(f),X)
+)
+
+ghost(Complex,Complex,List) := ComplexMap => (G,X,L) -> (
+    -- Input: G needs to be a complex of projective or free modules
+    -- Input: L is a list of integers
+    
+    f := fold((a,b) -> a | b,apply(L,n -> rightApproximation(G,X,n)));
+    
+    return canonicalMap(cone(f),X)
 )
 
 ghost(Complex,Complex) := ComplexMap => (G,X) -> (
-    ghost(G,X,min G + max X)
+    ghost(G,X,toList((min X - max G)..(max G + min G)))
 )
 
--- Creates a map with source X that is R-ghost in degrees <= n
+-- Creates an R[-n]-ghost map
 ghost(Complex,ZZ) := ComplexMap => (X,n) -> (
-    R := ring X;
     
-    -- Construct the R-approximation of X
-    Q := fold((a,b) -> a ++ b,complex R^0,apply(toList((min X)..n),i -> complex(cover ker X.dd_i)[-i]));
---     Q := complex R^0;
---     for i from min X to n do Q = Q ++ complex(cover ker X.dd_i)[-i];
+    f := rightApproximation(X,n);
     
-    -- Construct map Q -> X
-    fun := i -> if (i >= min X or i <= n) then inducedMap(X_i,ker X.dd_i)*map(ker X.dd_i,Q_i,id_(Q_i)) else map(R^0,X_i);
+    return canonicalMap(cone(f),X)
+)
+
+ghost(Complex,List) := ComplexMap => (X,L) -> (
     
-    -- Return the map X -> G
-    canonicalMap(cone(map(X,Q,fun)),X)
+    f := fold((a,b) -> a | b, apply(L,n -> rightApproximation(X,n)));
+    
+    return canonicalMap(cone(f),X)
 )
 
 -- Creates an R-ghost map with source X
 ghost(Complex) := ComplexMap => (X) -> (
-    ghost(X,max HH X)
+    ghost(X,toList((min X)..(max X)))
 )
 
 ---------------------------------------------------------------
@@ -112,36 +178,29 @@ ghost(Complex) := ComplexMap => (X) -> (
 ---------------------------------------------------------------
 coghost = method( TypicalValue => ComplexMap );
 
-coghost(Complex,Complex) := ComplexMap => (G,X) -> (
-    -- Check that G and X are complexes over the same ring
-    R := ring G;
-    if not(R === ring X) then error "expected complexes over the same ring";
+coghost(Complex,Complex,ZZ) := ComplexMap => (G,X,n) -> (
+    -- Input: X needs to be a complex of projective or free modules
     
-    H := Hom(X,G);
+    f := leftApproximation(G,X,n);
     
-    -- Collect the generators of H of the form X -> G[i]
-    generatorsInDegree := (i) -> (
-        K := ker H.dd_i;
-        Q := cover K;
-        -- induced module map Q -> H_i
-        h := inducedMap(H_i,K)*map(K,Q,id_Q);
-        
-        -- get R^[-i] -> H from the jth component of Q
-        pickGenerator := (j) ->  map(H,(complex R^1)[-i],k -> if k==i then map(H_i,R^1,h*(id_Q)_{j}));
-        -- from R^1[-i] -> H get X -> G[i]
-        generatorToMorphism := (f) -> map(G[i],X,(homomorphism f),Degree => 0);
-        
-        apply(toList(0..(rank Q-1)),j -> generatorToMorphism(pickGenerator j))
-    );
-    
-    L := flatten apply(toList((min H)..(max H)),generatorsInDegree);
-    
-    f := fold((a,b) -> a || b,L);
-    canonicalMap(X[-1],cone(f))[1]
+    return canonicalMap(X[-1],cone(f))[1]
 )
 
-coghost(Complex) := ComplexMap => (X) -> (
-    coghost(complex((ring X)^1),X)
+coghost(Complex,Complex,List) := ComplexMap => (G,X,L) -> (
+    -- Input: X needs to be a complex of projective or free modules
+    -- Input: L is a list of integers
+    
+    f := fold((a,b) -> a || b,apply(L,n -> leftApproximation(G,X,n)));
+    
+    return canonicalMap(X[-1],cone(f))[1]
+)
+
+coghost(Complex,ZZ) := ComplexMap => (X,n) -> (
+    coghost(complex((ring X)^1),X,n)
+)
+
+coghost(Complex,List) := ComplexMap => (X,L) -> (
+    coghost(complex((ring X)^1),X,L)
 )
 
 ---------------------------------------------------------------
@@ -153,7 +212,7 @@ level = method( TypicalValue => ZZ,
                              LengthLimitGenerator => 5,
                              Strategy => "ghost" } );
 
-level(Complex,Complex) := ZZ => opts -> (G,X) -> (
+level(Complex,Complex,List) := ZZ => opts -> (G,X,L) -> (
     -- Check that G and X are complexes over the same ring
     if not(ring G === ring X) then error "expected complexes over the same ring";
     
@@ -171,7 +230,7 @@ level(Complex,Complex) := ZZ => opts -> (G,X) -> (
         -- As long as the composition of the ghost maps g is non-zero, continue
         while ((not isNullHomotopic g) and (n < opts.MaxLevelAttempts)) do (
             rX = f.source;
-            f = coghost(rG,rX);
+            f = coghost(rG,rX,L);
             
             g = g*f;
             n = n+1;
@@ -180,7 +239,7 @@ level(Complex,Complex) := ZZ => opts -> (G,X) -> (
         -- As long as the composition of the ghost maps g is non-zero, continue
         while ((not isNullHomotopic g) and (n < opts.MaxLevelAttempts)) do (
             rX = f.target;
-            f = ghost(rG,rX);
+            f = ghost(rG,rX,L);
             
             -- minimize if possible
             if homogeneous then f = (minimize f.target).cache.minimizingMap * f;
@@ -193,25 +252,24 @@ level(Complex,Complex) := ZZ => opts -> (G,X) -> (
 )
 
 -- Level with respect to R
-level(Complex) := ZZ => opts -> (X) -> (
+level(Complex,List) := ZZ => opts -> (X,L) -> (
     if (X == 0) then return 0; -- needed because resolution does not work for the zero complex
     
     rX := resolution(X, LengthLimit => opts.LengthLimit);
     n := 0;
     f := id_(rX);
     g := f;
-    h := max HH X;
     i := min X;
     homogeneous := isHomogeneous X;
     -- The strategy decides whether ghost or coghost maps are used
     if (opts.Strategy == "coghost") then ( -- Coghost maps
         -- For coghost maps there is no `better' way for level wrt to R
-        n = level((ring X)^1,rX, MaxLevelAttempts => opts.MaxLevelAttempts, LengthLimit => opts.LengthLimit, LengthLimitGenerator => 0, Strategy => opts.Strategy);
+        n = level((ring X)^1,rX,L, MaxLevelAttempts => opts.MaxLevelAttempts, LengthLimit => opts.LengthLimit, LengthLimitGenerator => 0, Strategy => opts.Strategy);
     ) else ( -- Ghost maps
         -- As long as the composition of the ghost maps g is non-zero, continue
         while ((not isNullHomotopic g) and (n < opts.MaxLevelAttempts)) do (
             rX = f.target;
-            f = ghost(rX,h+n);
+            f = ghost(rX,L);
             -- minimize if possible
             if homogeneous then f = (minimize f.target).cache.minimizingMap * f;
             
@@ -999,19 +1057,24 @@ doc ///
         ghost
         (ghost, Complex, Complex)
         (ghost, Complex, Complex, ZZ)
+        (ghost, Complex, Complex, List)
         (ghost, Complex)
         (ghost, Complex, ZZ)
+        (ghost, Complex, List)
     Headline
         constructs a ghost map
     Usage
         ghost(G,X)
         ghost(G,X,n)
+        ghost(G,X,L)
         ghost X
         ghost(X,n)
+        ghost(X,L)
     Inputs
         X:Complex
         G:Complex
         n:ZZ
+        L:List
     Outputs
         :ComplexMap
             a ghost map with source $X$
@@ -1062,8 +1125,10 @@ doc ///
 doc ///
     Key
         coghost
-        (coghost, Complex, Complex)
-        (coghost, Complex)
+        (coghost, Complex, Complex,ZZ)
+        (coghost, Complex, Complex,List)
+        (coghost, Complex,ZZ)
+        (coghost, Complex,List)
     Headline
         constructs a coghost map
     Usage
@@ -1100,8 +1165,8 @@ doc ///
 doc ///
     Key
         level
-        (level, Complex)
-        (level, Complex, Complex)
+        (level, Complex,List)
+        (level, Complex, Complex,List)
         (level, Module)
         (level, Module, Module)
         (level, Module, Complex)
