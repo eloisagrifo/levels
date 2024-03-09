@@ -409,7 +409,7 @@ supportVariety(Complex) := Ideal => opts -> (X) -> (
 	toodd = compress toodd;
 	toodd = transpose compress transpose toodd;
 	N := binomial(rank source toodd,r)*binomial(rank target toodd,r);
-	if (100000 > 0.01*N) and (0.01*N > 10000) then N = ceiling(0.01*N) else N = min(N,2000);
+	(if (100000 > 0.01*N) and (0.01*N > 10000) then N = ceiling(0.01*N) else N = min(N,2000));
     	return ideal mingens chooseGoodMinors(N,r,toodd)
 	);
 
