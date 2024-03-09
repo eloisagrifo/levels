@@ -33,7 +33,8 @@ export {
     "rightApproximation",
 --    "findgs",
     "restrict",
-    "exts"
+    "exts",
+    "supportMatrices"
 }
 
 needsPackage "CompleteIntersectionResolutions"
@@ -513,7 +514,9 @@ supportMatrices(Complex) := Ideal => opts -> (X) -> (
     return {toeven, toodd}
 )
 
-
+supportVariety(Module) := Ideal => opts -> (M) -> (
+    supportMatrix(complex(M))
+)
 
 ---------------------------------------------------------------
 -- Check if X is built by G
