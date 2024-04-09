@@ -377,7 +377,7 @@ exts(Module) := List => Y -> (
 	H := higherHomotopies(flatten entries gens I, Pi,floor((length M + 1)/2));
 	mu := numgens I;
 	Qvars := Q_*;
-	a := local a;
+	a := getSymbol "a";
 	S := k(monoid[(Qvars | toList(a_1..a_mu))]);
 	--Produces a polynomial ring with twice as many variables as R.  
 	--The peculiar notation in the previous two lines
@@ -416,7 +416,7 @@ supportVariety(Complex) := Ideal => opts -> (X) -> (
 	H := higherHomotopies(flatten entries gens I, Pi,floor((length M + 1)/2));
 	mu := numgens I;
 	Qvars := Q_*;
-	a := local a;
+	a := getSymbol "a";
 	S := k(monoid[(Qvars | toList(a_1..a_mu))]);
 	--Produces a polynomial ring with twice as many variables as R.  
 	--The peculiar notation in the previous two lines
@@ -447,7 +447,7 @@ supportVariety(Complex) := Ideal => opts -> (X) -> (
 	H = higherHomotopies(flatten entries gens I, Pi,floor((length M + 1)/2));
 	mu = numgens I;
 	Qvars = Q_*;
-	a = local a;
+	a = getSymbol "a";
 	S = k(monoid[(Qvars | toList(a_1..a_mu))]);
 	--Produces a polynomial ring with twice as many variables as R.  
 	--The peculiar notation in the previous two lines
@@ -491,8 +491,8 @@ supportVariety(Complex,Complex) := Ideal => opts -> (X,Y) -> (
 
 
 
-
-supportMatrices(Complex) := Ideal => opts -> (X) -> (
+supportMatrices = method();
+supportMatrices(Complex) := Ideal => X -> (
     R := ring X;
     I := ideal R;
     Q := ring I;
@@ -502,7 +502,7 @@ supportMatrices(Complex) := Ideal => opts -> (X) -> (
     H := higherHomotopies(flatten entries gens I, Pi,floor((length M + 1)/2));
     mu := numgens I;
     Qvars := Q_*;
-    a := local a;
+    a := getSymbol "a";
     S := k(monoid[(Qvars | toList(a_1..a_mu))]);
     QtoS := map(S,Q,drop(S_*,-mu));
     T := S/ideal drop(S_*,-mu);
@@ -510,13 +510,10 @@ supportMatrices(Complex) := Ideal => opts -> (X) -> (
     evens := select(toList(min M .. max M), o -> even(o));
     toeven := matrix table(evens, odds, (j,i) -> degreeij(H, {i,j}, QtoS, M.module)) ** T;
     toodd := matrix table(odds, evens, (j,i) -> degreeij(H, {i,j}, QtoS, M.module)) ** T;
-    toodd = compress toodd;
-    return {toeven, toodd}
+    {toeven, toodd}
 )
 
-supportVariety(Module) := Ideal => opts -> (M) -> (
-    supportMatrix(complex(M))
-)
+supportMatrices(Module) := Ideal => X -> (supportMatrices(complex(X)))
 
 ---------------------------------------------------------------
 -- Check if X is built by G
