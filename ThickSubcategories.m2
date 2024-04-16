@@ -54,7 +54,7 @@ needsPackage "FastMinors"
 ---------------------------------------------------------------
 rightApproximation = method( TypicalValue => ComplexMap );
 
-rightApproximation(Complex,Complex,ZZ) := ComplexMap => (G,X,n) -> (
+rightApproximation(Complex,Complex) := ComplexMap => (G,X) -> (
     -- Input: G needs to be a complex of projective or free modules
     -- Check that G and X are complexes over the same ring
     R := ring G;
@@ -62,9 +62,9 @@ rightApproximation(Complex,Complex,ZZ) := ComplexMap => (G,X,n) -> (
     
     -- JL: This is overkill, we only need the degree 0 piece, as well as the maps (to and) from 0
     -- The Hom-sets in D(Mod(R)) are the homology of H
-    H := Hom(G[-n],X);
+    H := Hom(G,X);
     
-    -- Collect the generators of H_0(H), they are maps G[-n] -> X
+    -- Collect the generators of H_0(H), they are maps G -> X
     -- JL: There are two ways to compute them, via the homology or the kernel. Need to run more test to see which is more efficient.
     -- Using the kernel
     K := trim ker H.dd_0;
@@ -77,18 +77,26 @@ rightApproximation(Complex,Complex,ZZ) := ComplexMap => (G,X,n) -> (
     -- Q := cover L;
     -- h := inducedMap(H_0,K) * (map(L,Q,id_Q) // inducedMap(L,K));
     
-    -- for each generator of Q pick the corresponding map G[-n] -> X
+    -- for each generator of Q pick the corresponding map G -> X
     generatorToMorphism := (j) -> homomorphism(map(H,(complex R^1),k -> if k==0 then map(H_0,R^1,h*Q_{j})));
     
-    -- Combine all the maps G[-n] -> X
-    return fold((a,b) -> a | b,map(X,G[-n],0),apply(toList(0..(rank Q-1)),j -> generatorToMorphism(j)))
+    -- Combine all the maps G -> X
+    return fold((a,b) -> a | b,map(X,G,0),apply(toList(0..(rank Q-1)),j -> generatorToMorphism(j)))
 )
 
 -- Creates a right R-approximation
 rightApproximation(Complex,ZZ) := ComplexMap => (X,n) -> (
     R := ring X;
     
-    return map(X,complex(R^1,Base => n), k -> if k == 0 then inducedMap(X_n,ker X.dd_n) * coverMap ker X.dd_n)
+    Q := fold((a,b) -> a ++ b,complex R^0,apply(toList((min X)..n),i -> complex(cover ker X.dd_i)[-i]));
+    
+    -- Construct map Q -> X
+    fun := i -> if (i >= min X or i <= n) then inducedMap(X_i,ker X.dd_i)*map(ker X.dd_i,Q_i,id_(Q_i)) else map(R^0,X_i);
+    
+    return map(X,Q,fun);
+    
+    -- something is wrong!!
+    -- return map(X,complex(R^1,Base => n), k -> if k == 0 then inducedMap(X_n,ker X.dd_n) * coverMap ker X.dd_n)
 )
 
 ---------------------------------------------------------------
@@ -97,7 +105,7 @@ rightApproximation(Complex,ZZ) := ComplexMap => (X,n) -> (
 leftApproximation = method( TypicalValue => ComplexMap );
 
 -- JL: Basically the same code as for rightApproximation, make an auxiliary method?
-leftApproximation(Complex,Complex,ZZ) := ComplexMap => (G,X,n) -> (
+leftApproximation(Complex,Complex) := ComplexMap => (G,X) -> (
     -- Input: X needs to be a complex of projective or free modules
     -- Check that G and X are complexes over the same ring
     R := ring G;
@@ -105,9 +113,9 @@ leftApproximation(Complex,Complex,ZZ) := ComplexMap => (G,X,n) -> (
     
     -- JL: This is overkill, we only need the degree 0 piece, as well as the maps (to and) from 0
     -- The Hom-sets in D(Mod(R)) are the homology of H
-    H := Hom(X,G[-n]);
+    H := Hom(X,G);
     
-    -- Collect the generators of H_0(H), they are maps G[-n] -> X
+    -- Collect the generators of H_0(H), they are maps X -> G
     -- JL: There are two ways to compute them, via the homology or the kernel. Need to run more test to see which is more efficient.
     -- Using the kernel
     K := trim ker H.dd_0;
@@ -120,11 +128,11 @@ leftApproximation(Complex,Complex,ZZ) := ComplexMap => (G,X,n) -> (
     -- Q := cover L;
     -- h := inducedMap(H_0,K) * (map(L,Q,id_Q) // inducedMap(L,K));
     
-    -- for each generator of Q pick the corresponding map X -> G[-n]
+    -- for each generator of Q pick the corresponding map X -> G
     generatorToMorphism := (j) -> homomorphism(map(H,(complex R^1),k -> if k==0 then map(H_0,R^1,h*Q_{j})));
     
-    -- Combine all the maps X -> G[-n]
-    return fold((a,b) -> a || b,map(G[-n],X,0),apply(toList(0..(rank Q-1)),j -> generatorToMorphism(j)))
+    -- Combine all the maps X -> G
+    return fold((a,b) -> a || b,map(G,X,0),apply(toList(0..(rank Q-1)),j -> generatorToMorphism(j)))
 )
 
 ---------------------------------------------------------------
@@ -132,36 +140,22 @@ leftApproximation(Complex,Complex,ZZ) := ComplexMap => (G,X,n) -> (
 ---------------------------------------------------------------
 ghost = method( TypicalValue => ComplexMap );
 
--- Creates a map f with source X such that Hom(G[-n],f) = 0
-ghost(Complex,Complex,ZZ) := ComplexMap => (G,X,n) -> (
-    -- Input: G needs to be a complex of projective or free modules
-    
-    f := rightApproximation(G,X,n);
-    
-    return canonicalMap(cone(f),X)
-)
-
+-- Creates a map f with source X such that Hom(G[-n],f) = 0 for every n in L
 ghost(Complex,Complex,List) := ComplexMap => (G,X,L) -> (
     -- Input: G needs to be a complex of projective or free modules
     -- Input: L is a list of integers
     
-    f := fold((a,b) -> a | b,apply(L,n -> rightApproximation(G,X,n)));
+    f := fold((a,b) -> a | b,apply(L,n -> rightApproximation(G[-n],X)));
     
     return canonicalMap(cone(f),X)
 )
 
 ghost(Complex,Complex) := ComplexMap => (G,X) -> (
-    ghost(G,X,toList((min X - max G)..(max G + min G)))
+    -- ghost(G,X,toList((min X - max G)..(max G + min G)))
+    ghost(G,X,{0})
 )
 
--- Creates an R[-n]-ghost map
-ghost(Complex,ZZ) := ComplexMap => (X,n) -> (
-    
-    f := rightApproximation(X,n);
-    
-    return canonicalMap(cone(f),X)
-)
-
+-- Creates an R[-n]-ghost map for every n in L
 ghost(Complex,List) := ComplexMap => (X,L) -> (
     
     f := fold((a,b) -> a | b, apply(L,n -> rightApproximation(X,n)));
@@ -171,7 +165,8 @@ ghost(Complex,List) := ComplexMap => (X,L) -> (
 
 -- Creates an R-ghost map with source X
 ghost(Complex) := ComplexMap => (X) -> (
-    ghost(X,toList((min X)..(max X)))
+    -- ghost(X,toList((min X)..(max X)))
+    ghost(X,{0})
 )
 
 ---------------------------------------------------------------
@@ -179,29 +174,26 @@ ghost(Complex) := ComplexMap => (X) -> (
 ---------------------------------------------------------------
 coghost = method( TypicalValue => ComplexMap );
 
-coghost(Complex,Complex,ZZ) := ComplexMap => (G,X,n) -> (
-    -- Input: X needs to be a complex of projective or free modules
-    
-    f := leftApproximation(G,X,n);
-    
-    return canonicalMap(X[-1],cone(f))[1]
-)
-
 coghost(Complex,Complex,List) := ComplexMap => (G,X,L) -> (
     -- Input: X needs to be a complex of projective or free modules
     -- Input: L is a list of integers
     
-    f := fold((a,b) -> a || b,apply(L,n -> leftApproximation(G,X,n)));
+    f := fold((a,b) -> a || b,apply(L,n -> leftApproximation(G[n],X)));
     
     return canonicalMap(X[-1],cone(f))[1]
 )
 
-coghost(Complex,ZZ) := ComplexMap => (X,n) -> (
-    coghost(complex((ring X)^1),X,n)
+coghost(Complex,Complex) := ComplexMap => (G,X) -> (
+    -- Input: X needs to be a complex of projective or free modules
+    return coghost(G,X,{0});
 )
 
 coghost(Complex,List) := ComplexMap => (X,L) -> (
     coghost(complex((ring X)^1),X,L)
+)
+
+coghost(Complex) := ComplexMap => (X) -> (
+    return coghost(X,{0})
 )
 
 ---------------------------------------------------------------
@@ -282,21 +274,21 @@ level(Complex,List) := ZZ => opts -> (X,L) -> (
     n
 )
 
-level(Module) := ZZ => opts -> (M) -> (
+level(Module,List) := ZZ => opts -> (M,L) -> (
     X := complex(M);
-    level(X, MaxLevelAttempts => opts.MaxLevelAttempts, LengthLimit => opts.LengthLimit, Strategy => opts.Strategy)
+    level(X,L, MaxLevelAttempts => opts.MaxLevelAttempts, LengthLimit => opts.LengthLimit, Strategy => opts.Strategy)
 )
 
-level(Module,Module) := ZZ => opts -> (M,N) -> (
-    level(complex(M),complex(N), MaxLevelAttempts => opts.MaxLevelAttempts, LengthLimit => opts.LengthLimit, LengthLimitGenerator => opts.LengthLimitGenerator, Strategy => opts.Strategy)
+level(Module,Module,List) := ZZ => opts -> (M,N,L) -> (
+    level(complex(M),complex(N),L, MaxLevelAttempts => opts.MaxLevelAttempts, LengthLimit => opts.LengthLimit, LengthLimitGenerator => opts.LengthLimitGenerator, Strategy => opts.Strategy)
 )
 
-level(Module,Complex) := ZZ => opts -> (M,X) -> (
-    level(complex(M),X, MaxLevelAttempts => opts.MaxLevelAttempts, LengthLimit => opts.LengthLimit, LengthLimitGenerator => opts.LengthLimitGenerator, Strategy => opts.Strategy)
+level(Module,Complex,List) := ZZ => opts -> (M,X,L) -> (
+    level(complex(M),X,L, MaxLevelAttempts => opts.MaxLevelAttempts, LengthLimit => opts.LengthLimit, LengthLimitGenerator => opts.LengthLimitGenerator, Strategy => opts.Strategy)
 )
 
-level(Complex,Module) := ZZ => opts -> (G,N) -> (
-    level(G,complex(N), MaxLevelAttempts => opts.MaxLevelAttempts, LengthLimit => opts.LengthLimit, LengthLimitGenerator => opts.LengthLimitGenerator, Strategy => opts.Strategy)
+level(Complex,Module,List) := ZZ => opts -> (G,N,L) -> (
+    level(G,complex(N),L, MaxLevelAttempts => opts.MaxLevelAttempts, LengthLimit => opts.LengthLimit, LengthLimitGenerator => opts.LengthLimitGenerator, Strategy => opts.Strategy)
 )
 
 ---------------------------------------------------------------
@@ -1083,19 +1075,15 @@ doc ///
     Key
         ghost
         (ghost, Complex, Complex)
-        (ghost, Complex, Complex, ZZ)
         (ghost, Complex, Complex, List)
         (ghost, Complex)
-        (ghost, Complex, ZZ)
         (ghost, Complex, List)
     Headline
         constructs a ghost map
     Usage
         ghost(G,X)
-        ghost(G,X,n)
         ghost(G,X,L)
         ghost X
-        ghost(X,n)
         ghost(X,L)
     Inputs
         X:Complex
@@ -1104,29 +1092,27 @@ doc ///
         L:List
     Outputs
         :ComplexMap
-            a ghost map with source $X$
+            a map with source $X$ that is ghost with respect to $G$
     Description
         Text
-            This method computes a map with source $X$, that is ghost with respect to $G$. That is any pre-composition with a suspension of $G$ is zero in the derived category.
+            A map $X \to Y$ is ghost with respect to $G$ if any composition $G \to X \to Y$ is zero. 
         Example
             needsPackage "Complexes";
             R = QQ[x]
             X = complex(R^1/ideal(x^2))
             G = freeResolution(R^1/ideal(x))
             f = ghost(G,X)
-            (prune HH Hom(G,f)) == 0
+            (prune HH_0 Hom(G,f)) == 0
         Text
-            When additionally an integer $n$ is given, the output is a ghost map in degrees $\leq n$. 
+            When a list of integers is given then it returns a map that is ghost with respect to $G[-n]$ for every integer $n$ in the list L.
         Example
             needsPackage "Complexes";
             R = QQ[x,y]
             X = complex({map(R^1/ideal(x^2),R^1/ideal(x*y),{{x}}),map(R^1/ideal(x*y),R^1/ideal(y^2),{{x}})})
             G = freeResolution(R^1/ideal(y^2))
-            f = ghost(G,X,1)
-            (prune HH_(-1) Hom(G,f)) == 0
+            f = ghost(G,X,{0,1})
             (prune HH_0 Hom(G,f)) == 0
             (prune HH_1 Hom(G,f)) == 0
-            (prune HH_2 Hom(G,f)) == 0
         Text
             For one complex $X$, this method returns a ghost map with source $X$ with respect to the ring.
         Example
@@ -1134,14 +1120,14 @@ doc ///
             R = QQ[x,y]
             X = complex(R^1/ideal(x*y))
             f = ghost(X)
-            (prune HH f) == 0
+            (prune HH_0 f) == 0
         Text
-            For a complex $X$ and an integer $n$, the method considers only the part of the complex $X$ of degree less or equal to $n$. That is it computes a map starting at $X$, that is zero in homology of degree less or equal $n$.
+            When additionally a list of integers is given, then it returns a map that is ghost with respect to $R[-n]$ for every integer $N$ in the List L
         Example
             needsPackage "Complexes";
             R = QQ[x,y]
             X = complex(R^1/ideal(x*y)) ++ complex(R^1/ideal(x*y))[-2]
-            f = ghost(X,1)
+            f = ghost(X,{0,1})
             HH_0 f == 0
             HH_1 f == 0
             HH_2 f == 0
@@ -1152,31 +1138,44 @@ doc ///
 doc ///
     Key
         coghost
-        (coghost, Complex, Complex,ZZ)
+        (coghost, Complex, Complex)
         (coghost, Complex, Complex,List)
-        (coghost, Complex,ZZ)
+        (coghost, Complex)
         (coghost, Complex,List)
     Headline
         constructs a coghost map
     Usage
-        coghost X
         coghost(G,X)
+        coghost(G,X,L)
+        coghost X
+        coghost(X,L)
     Inputs
         X:Complex
         G:Complex
+        L:List
     Outputs
         :ComplexMap
-            a coghost map with target $X$
+            a map with target $X$ that is coghost with respect to $G$
     Description
         Text
-            This method computes a map with target $X$, that is coghost with respect to $G$. That is any post-composition with a suspension of $G$ is zero in the derived category.
+            A map $W \to X$ is coghost with respect to $G$ if any composition $W \to X \to G$ is zero. 
         Example
             needsPackage "Complexes";
             R = QQ[x]
             X = freeResolution(R^1/ideal(x^2))
             G = complex(R^1/ideal(x))
             f = coghost(G,X)
-            (prune HH Hom(f,G)) == 0
+            (prune HH_0 Hom(f,G)) == 0
+        Text
+            When a list of integers is given then it returns a map that is coghost with respect to $G[n]$ for every integer $n$ in the list L.
+        Example
+            needsPackage "Complexes";
+            R = QQ[x]
+            X = freeResolution(R^1/ideal(x^2))
+            G = complex(R^1/ideal(x))
+            f = coghost(G,X,{0,-1})
+            (prune HH_0 Hom(f,G)) == 0
+            (prune HH_(-1) Hom(f,G)) == 0
         Text
             For one complex $X$, this method returns a coghost map with target $X$ with respect to the ring.
         Example
@@ -1184,7 +1183,7 @@ doc ///
             R = QQ[x,y]
             X = freeResolution(R^1/ideal(x*y))
             f = coghost(X)
-            (prune HH Hom(f,complex R^1)) == 0
+            (prune HH_0 Hom(f,complex R^1)) == 0
     Caveat
         This method only works if $X$ is a complex of free modules. 
 ///
@@ -1192,29 +1191,30 @@ doc ///
 doc ///
     Key
         level
-        (level, Complex,List)
-        (level, Complex, Complex,List)
-        (level, Module)
-        (level, Module, Module)
-        (level, Module, Complex)
-        (level, Complex, Module)
+        (level, Complex, List)
+        (level, Complex, Complex, List)
+        (level, Module, List)
+        (level, Module, Module, List)
+        (level, Module, Complex, List)
+        (level, Complex, Module, List)
     Headline
         computes the level of a complex with respect to another complex, or the ring by default
     Usage
-        level(X)
-        level(G,X)
-        level(M)
-        level(N,M)
-        level(N,X)
-        level(G,M)
+        level(X,L)
+        level(G,X,L)
+        level(M,L)
+        level(N,M,L)
+        level(N,X,L)
+        level(G,M,L)
     Inputs
         X:Complex
         G:Complex -- if no G is provided, G is assumed to be the underlying ring
         M:Module -- M is replaced with the corresponding complex
         N:Module -- N is replaced with the corresponding complex
+        L:List
     Outputs
         :ZZ
-            the level of X with respect to G
+            the level of X with respect to {G[-n] | n in L}
     Description
         Text
             Computes the level of the second complex with respect to the first complex. 
@@ -1222,24 +1222,22 @@ doc ///
             When the input is one complex, then it computes the level with respect to the ring. 
         Example
             needsPackage "Complexes";
-            R = QQ[x,y,z]
-            F = complex(R^0)
-            level(F)
-        
+            R = QQ[x,y]
+            F = koszulComplex {x^2,x*y,y^2}
+            level(F,{0,1,2,3})
         Text
-            When the input is one module, then it computes the level of the module viewed as a complex concentrated in degree 0. The output is precisely the projective dimension $+1$. 
+            When the input is one module, then it computes the level of the module viewed as a complex concentrated in degree 0. If enough suspensions are allowed, then the output is precisely the projective dimension $+1$. 
         Example
             R = QQ[x,y]
             M = R^1/ideal(x,y)
-            level(M)
-        
+            level(M,toList(0..3))
         Text
             When the input consists of two complexes (or modules or one complex and one module), then it computes the level of the second complex with respect to the first. 
         Example
             R = QQ[x]
             M = R^1/ideal(x)
             N = R^1/ideal(x^4)
-            level(M,N)
+            level(M,N,{0})
     Caveat
         Only returns the correct answer if both arguments are perfect.
     SeeAlso
@@ -1259,10 +1257,10 @@ doc ///
         Text
             When computing the level of a complex, a sequence of ghost maps is constructed. The level is the smallest number for which the composition of the ghost maps is zero. This option stops the computation after the given number of steps. 
         Example
-            R = QQ[x]/(x^2)
-            M = R^1/ideal(x)
-            level(M,MaxLevelAttempts => 4)
-            level(M,MaxLevelAttempts => 5)
+            R = QQ[x,y]
+            M = R^1/ideal(x,y)
+            level(M,{0,1},MaxLevelAttempts => 5)
+            level(M,{0,1,2},MaxLevelAttempts => 5)
     SeeAlso
         level
 ///
@@ -1280,8 +1278,8 @@ doc ///
         Example
             R = QQ[x]/(x^2)
             M = R^1/ideal(x)
-            level(M,LengthLimit => 4)
-            level(M,LengthLimit => 5)
+            level(M,toList(0..4),LengthLimit => 4)
+            level(M,toList(0..5),LengthLimit => 5)
     SeeAlso
         level
 ///
@@ -1293,7 +1291,7 @@ doc ///
     Headline
         compute the resolution of the generator of at most this length
     Usage
-        level(G,X, LengthLimitGenerator => 5)
+        level(..., LengthLimitGenerator => 5)
     Description
         Text
             To compute the level with respect to a $G$, the level with respect to a free resolution of $G$ is computed. 
@@ -1305,8 +1303,8 @@ doc ///
             f2 = map(source f1,,matrix{{x}})
             f3 = map(source f2,,matrix{{x}})
             X = complex{f1,f2,f3}
-            level(G,X,LengthLimitGenerator => 2)
-            level(G,X,LengthLimitGenerator => 3)
+            level(G,X,{0,1,2},LengthLimitGenerator => 2)
+            level(G,X,{0,1,2},LengthLimitGenerator => 3)
     SeeAlso
         level
 ///
