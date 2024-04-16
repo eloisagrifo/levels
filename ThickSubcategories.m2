@@ -1647,7 +1647,7 @@ doc ///
 
 TEST ///
     R = QQ[x,y,z]
-    assert(level(R^1) == 1)
+    assert(level(R^1,{0}) == 1)
 ///
 
 
@@ -1655,15 +1655,15 @@ TEST ///
     needsPackage "Complexes"
     R = QQ[x,y,z]
     F = freeResolution (R^2)
-    assert(level F == 1)
+    assert(level(F,{0}) == 1)
 ///
 
 TEST ///
     needsPackage "Complexes"
     R = QQ[x,y,z]/ideal(x*y*z)
-    G = freeResolution (R^2)
+    G = complex (R^2)
     F = G ++ G[1] ++ G[-1]
-    assert(level F == 1)
+    assert(level(F,{-1,0,1}) == 1)
 ///
 
 TEST ///
@@ -1671,7 +1671,7 @@ TEST ///
     R = QQ[x,y,z]
     I = ideal vars R
     F = freeResolution(R^1/I)
-    assert(level F == 4)
+    assert(level(F,{0,1,2,3}) == 4)
 ///
 
 TEST ///
@@ -1679,7 +1679,7 @@ TEST ///
     R = QQ[x,y,z]
     I = ideal vars R
     F = freeResolution(R^1/I)[-3]
-    assert(level F == 4)
+    assert(level(F,{3,4,5,6}) == 4)
 ///
 
 TEST ///
@@ -1687,7 +1687,7 @@ TEST ///
     R = QQ[x,y,z]
     I = ideal vars R
     F = freeResolution(R^1/I^2)
-    assert(level F == 4)
+    assert(level(F,{0,1,2,3}) == 4)
 ///
 
 TEST ///
@@ -1695,7 +1695,7 @@ TEST ///
     R = QQ[x,y]
     G = freeResolution(R^1/ideal(x))
     X = freeResolution(R^1/ideal(x,y^2))
-    assert(level(G,X) == 2)
+    assert(level(G,X,{0,1}) == 2)
 ///
 
 end
