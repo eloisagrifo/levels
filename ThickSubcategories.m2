@@ -16,6 +16,7 @@ export {
     "MaxLevelAttempts",
     "LengthLimitGenerator",
     "FiniteLength",
+    "HomogeneousMaps",
     "ResidueField",
     "RankVariety",
     "RankVarietyFast",
@@ -52,9 +53,10 @@ needsPackage "FastMinors"
 ---------------------------------------------------------------
 -- Construct a right G-approximation
 ---------------------------------------------------------------
-rightApproximation = method( TypicalValue => ComplexMap );
+rightApproximation = method( TypicalValue => ComplexMap,
+                             Options => { HomogeneousMaps => false } );
 
-rightApproximation(Complex,Complex) := ComplexMap => (G,X) -> (
+rightApproximation(Complex,Complex) := ComplexMap => opts -> (G,X) -> (
     -- Input: G needs to be a complex of projective or free modules
     -- Check that G and X are complexes over the same ring
     R := ring G;
@@ -68,8 +70,16 @@ rightApproximation(Complex,Complex) := ComplexMap => (G,X) -> (
     -- JL: There are two ways to compute them, via the homology or the kernel. Need to run more test to see which is more efficient.
     -- Using the kernel
     K := trim ker H.dd_0;
-    Q := cover K;
-    h := inducedMap(H_0,K)*map(K,Q,id_Q);
+    
+    local h;
+    local Q;
+    if opts.HomogeneousMaps then (
+        h = inducedMap(H_0,K)*basis(0,K);
+        Q = source h;
+    ) else (
+        Q = cover K;
+        h = inducedMap(H_0,K)*map(K,Q,id_Q);
+    );
     
     -- Using the homology
     -- K := trim ker H.dd_0;
@@ -85,7 +95,7 @@ rightApproximation(Complex,Complex) := ComplexMap => (G,X) -> (
 )
 
 -- Creates a right R-approximation
-rightApproximation(Complex,ZZ) := ComplexMap => (X,n) -> (
+rightApproximation(Complex,ZZ) := ComplexMap => opts -> (X,n) -> (
     R := ring X;
     
     Q := fold((a,b) -> a ++ b,complex R^0,apply(toList((min X)..n),i -> complex(cover ker X.dd_i)[-i]));
@@ -102,10 +112,11 @@ rightApproximation(Complex,ZZ) := ComplexMap => (X,n) -> (
 ---------------------------------------------------------------
 -- Construct a left G-approximation
 ---------------------------------------------------------------
-leftApproximation = method( TypicalValue => ComplexMap );
+leftApproximation = method( TypicalValue => ComplexMap,
+                            Options => { HomogeneousMaps => false } );
 
 -- JL: Basically the same code as for rightApproximation, make an auxiliary method?
-leftApproximation(Complex,Complex) := ComplexMap => (G,X) -> (
+leftApproximation(Complex,Complex) := ComplexMap => opts -> (G,X) -> (
     -- Input: X needs to be a complex of projective or free modules
     -- Check that G and X are complexes over the same ring
     R := ring G;
@@ -138,33 +149,34 @@ leftApproximation(Complex,Complex) := ComplexMap => (G,X) -> (
 ---------------------------------------------------------------
 -- Create the G-ghost map associated to the right G-approximation
 ---------------------------------------------------------------
-ghost = method( TypicalValue => ComplexMap );
+ghost = method( TypicalValue => ComplexMap,
+                Options => { HomogeneousMaps => false } );
 
 -- Creates a map f with source X such that Hom(G[-n],f) = 0 for every n in L
-ghost(Complex,Complex,List) := ComplexMap => (G,X,L) -> (
+ghost(Complex,Complex,List) := ComplexMap => opts -> (G,X,L) -> (
     -- Input: G needs to be a complex of projective or free modules
     -- Input: L is a list of integers
     
-    f := fold((a,b) -> a | b,apply(L,n -> rightApproximation(G[-n],X)));
+    f := fold((a,b) -> a | b,apply(L,n -> rightApproximation(G[-n],X, HomogeneousMaps => opts.HomogeneousMaps)));
     
     return canonicalMap(cone(f),X)
 )
 
-ghost(Complex,Complex) := ComplexMap => (G,X) -> (
+ghost(Complex,Complex) := ComplexMap => opts -> (G,X) -> (
     -- ghost(G,X,toList((min X - max G)..(max G + min G)))
     ghost(G,X,{0})
 )
 
 -- Creates an R[-n]-ghost map for every n in L
-ghost(Complex,List) := ComplexMap => (X,L) -> (
+ghost(Complex,List) := ComplexMap => opts -> (X,L) -> (
     
-    f := fold((a,b) -> a | b, apply(L,n -> rightApproximation(X,n)));
+    f := fold((a,b) -> a | b, apply(L,n -> rightApproximation(X,n, HomogeneousMaps => opts.HomogeneousMaps)));
     
     return canonicalMap(cone(f),X)
 )
 
 -- Creates an R-ghost map with source X
-ghost(Complex) := ComplexMap => (X) -> (
+ghost(Complex) := ComplexMap => opts -> (X) -> (
     -- ghost(X,toList((min X)..(max X)))
     ghost(X,{0})
 )
@@ -172,28 +184,29 @@ ghost(Complex) := ComplexMap => (X) -> (
 ---------------------------------------------------------------
 -- Create the G-coghost map associated to the left G-approximation
 ---------------------------------------------------------------
-coghost = method( TypicalValue => ComplexMap );
+coghost = method( TypicalValue => ComplexMap,
+                  Options => { HomogeneousMaps => false } );
 
-coghost(Complex,Complex,List) := ComplexMap => (G,X,L) -> (
+coghost(Complex,Complex,List) := ComplexMap => opts -> (G,X,L) -> (
     -- Input: X needs to be a complex of projective or free modules
     -- Input: L is a list of integers
     
-    f := fold((a,b) -> a || b,apply(L,n -> leftApproximation(G[n],X)));
+    f := fold((a,b) -> a || b,apply(L,n -> leftApproximation(G[n],X, HomogeneousMaps => opts.HomogeneousMaps)));
     
     return canonicalMap(X[-1],cone(f))[1]
 )
 
-coghost(Complex,Complex) := ComplexMap => (G,X) -> (
+coghost(Complex,Complex) := ComplexMap => opts -> (G,X) -> (
     -- Input: X needs to be a complex of projective or free modules
-    return coghost(G,X,{0});
+    return coghost(G,X,{0}, HomogeneousMaps => opts.HomogeneousMaps);
 )
 
-coghost(Complex,List) := ComplexMap => (X,L) -> (
-    coghost(complex((ring X)^1),X,L)
+coghost(Complex,List) := ComplexMap => opts -> (X,L) -> (
+    coghost(complex((ring X)^1),X,L, HomogeneousMaps => opts.HomogeneousMaps)
 )
 
-coghost(Complex) := ComplexMap => (X) -> (
-    return coghost(X,{0})
+coghost(Complex) := ComplexMap => opts -> (X) -> (
+    return coghost(X,{0}, HomogeneousMaps => opts.HomogeneousMaps)
 )
 
 ---------------------------------------------------------------
@@ -203,7 +216,8 @@ level = method( TypicalValue => ZZ,
                 Options => { MaxLevelAttempts => 10,
                              LengthLimit => 10,
                              LengthLimitGenerator => 5,
-                             Strategy => "ghost" } );
+                             Strategy => "ghost",
+                             HomogeneousMaps => false } );
 
 level(Complex,Complex,List) := ZZ => opts -> (G,X,L) -> (
     -- Check that G and X are complexes over the same ring
@@ -223,7 +237,7 @@ level(Complex,Complex,List) := ZZ => opts -> (G,X,L) -> (
         -- As long as the composition of the ghost maps g is non-zero, continue
         while ((not isNullHomotopic g) and (n < opts.MaxLevelAttempts)) do (
             rX = f.source;
-            f = coghost(rG,rX,L);
+            f = coghost(rG,rX, HomogeneousMaps => opts.HomogeneousMaps);
             
             g = g*f;
             n = n+1;
@@ -232,7 +246,7 @@ level(Complex,Complex,List) := ZZ => opts -> (G,X,L) -> (
         -- As long as the composition of the ghost maps g is non-zero, continue
         while ((not isNullHomotopic g) and (n < opts.MaxLevelAttempts)) do (
             rX = f.target;
-            f = ghost(rG,rX,L);
+            f = ghost(rG,rX,L, HomogeneousMaps => opts.HomogeneousMaps);
             
             -- minimize if possible
             if homogeneous then f = (minimize f.target).cache.minimizingMap * f;
@@ -257,12 +271,12 @@ level(Complex,List) := ZZ => opts -> (X,L) -> (
     -- The strategy decides whether ghost or coghost maps are used
     if (opts.Strategy == "coghost") then ( -- Coghost maps
         -- For coghost maps there is no `better' way for level wrt to R
-        n = level((ring X)^1,rX,L, MaxLevelAttempts => opts.MaxLevelAttempts, LengthLimit => opts.LengthLimit, LengthLimitGenerator => 0, Strategy => opts.Strategy);
+        n = level((ring X)^1,rX,L, MaxLevelAttempts => opts.MaxLevelAttempts, LengthLimit => opts.LengthLimit, LengthLimitGenerator => 0, Strategy => opts.Strategy, HomogeneousMaps => opts.HomogeneousMaps);
     ) else ( -- Ghost maps
         -- As long as the composition of the ghost maps g is non-zero, continue
         while ((not isNullHomotopic g) and (n < opts.MaxLevelAttempts)) do (
             rX = f.target;
-            f = ghost(rX,L);
+            f = ghost(rX,L, HomogeneousMaps => opts.HomogeneousMaps);
             -- minimize if possible
             if homogeneous then f = (minimize f.target).cache.minimizingMap * f;
             
@@ -276,19 +290,19 @@ level(Complex,List) := ZZ => opts -> (X,L) -> (
 
 level(Module,List) := ZZ => opts -> (M,L) -> (
     X := complex(M);
-    level(X,L, MaxLevelAttempts => opts.MaxLevelAttempts, LengthLimit => opts.LengthLimit, Strategy => opts.Strategy)
+    level(X,L, MaxLevelAttempts => opts.MaxLevelAttempts, LengthLimit => opts.LengthLimit, Strategy => opts.Strategy, HomogeneousMaps => opts.HomogeneousMaps)
 )
 
 level(Module,Module,List) := ZZ => opts -> (M,N,L) -> (
-    level(complex(M),complex(N),L, MaxLevelAttempts => opts.MaxLevelAttempts, LengthLimit => opts.LengthLimit, LengthLimitGenerator => opts.LengthLimitGenerator, Strategy => opts.Strategy)
+    level(complex(M),complex(N),L, MaxLevelAttempts => opts.MaxLevelAttempts, LengthLimit => opts.LengthLimit, LengthLimitGenerator => opts.LengthLimitGenerator, Strategy => opts.Strategy, HomogeneousMaps => opts.HomogeneousMaps)
 )
 
 level(Module,Complex,List) := ZZ => opts -> (M,X,L) -> (
-    level(complex(M),X,L, MaxLevelAttempts => opts.MaxLevelAttempts, LengthLimit => opts.LengthLimit, LengthLimitGenerator => opts.LengthLimitGenerator, Strategy => opts.Strategy)
+    level(complex(M),X,L, MaxLevelAttempts => opts.MaxLevelAttempts, LengthLimit => opts.LengthLimit, LengthLimitGenerator => opts.LengthLimitGenerator, Strategy => opts.Strategy, HomogeneousMaps => opts.HomogeneousMaps)
 )
 
 level(Complex,Module,List) := ZZ => opts -> (G,N,L) -> (
-    level(G,complex(N),L, MaxLevelAttempts => opts.MaxLevelAttempts, LengthLimit => opts.LengthLimit, LengthLimitGenerator => opts.LengthLimitGenerator, Strategy => opts.Strategy)
+    level(G,complex(N),L, MaxLevelAttempts => opts.MaxLevelAttempts, LengthLimit => opts.LengthLimit, LengthLimitGenerator => opts.LengthLimitGenerator, Strategy => opts.Strategy, HomogeneousMaps => opts.HomogeneousMaps)
 )
 
 ---------------------------------------------------------------
@@ -1315,11 +1329,38 @@ doc ///
     Headline
         choose the strategy used to compute level
     Usage
-        level(G,X, LengthLimitGenerator => "ghost")
-        level(G,X, LengthLimitGenerator => "coghost")
+        level(..., LengthLimitGenerator => "ghost")
+        level(..., LengthLimitGenerator => "coghost")
     Description
         Text
             The default value is "ghost".
+    SeeAlso
+        coghost
+        ghost
+        level
+///
+
+doc ///
+    Key
+        HomogeneousMaps
+        [level,HomogeneousMaps]
+    Headline
+        decides whether computations are executed in the category of graded modules or category of modules
+    Usage
+        level(..., HomogeneousMaps => true)
+        level(..., HomogeneousMaps => false)
+    Description
+        Text
+            The default value is false. When HomogeneousMaps is true, then there are less chain maps, and for generation twists of the generator might be necessary.
+        Example
+            needsPackage "Complexes";
+            R = QQ[x,y]
+            G = complex R^1
+            X = freeResolution(R^1/ideal(x,y))
+            level(G,X,{0,1,2})
+            level(G,X,{0,1,2},HomogeneousMaps => true, MaxLevelAttempts => 5)
+            G2 = complex R^{0,-1,-2}
+            level(G2,X,{0,1,2},HomogeneousMaps => true)
     SeeAlso
         coghost
         ghost
@@ -1696,6 +1737,22 @@ TEST ///
     G = freeResolution(R^1/ideal(x))
     X = freeResolution(R^1/ideal(x,y^2))
     assert(level(G,X,{0,1}) == 2)
+///
+
+TEST ///
+    needsPackage "Complexes"
+    R = QQ[x,y]
+    G = complex R^1
+    X = complex R^{-1}
+    
+    assert(level(G,X,{0}) == 1)
+    assert(level(G,X,{0},HomogeneousMaps => true, MaxLevelAttempts => 5) == 5)
+    
+    Y = freeResolution(R^1/ideal(x,y))
+    assert(level(G,Y,{0,1,2}) == 3)
+    assert(level(G,Y,{0,1,2},HomogeneousMaps => true, MaxLevelAttempts => 5) == 5)
+    G2 = complex R^{0,-1,-2}
+    assert(level(G2,Y,{0,1,2},HomogeneousMaps => true) == 3)
 ///
 
 end
