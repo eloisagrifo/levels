@@ -32,6 +32,7 @@ export {
     "extKoszul",
     "higherHomotopies",
     "rightApproximation",
+    "leftApproximation",
 --    "findgs",
     "restrict",
     "exts",
@@ -58,19 +59,84 @@ rightApproximation = method( TypicalValue => ComplexMap,
 
 rightApproximation(Complex,Complex) := ComplexMap => opts -> (G,X) -> (
     -- Input: G needs to be a complex of projective or free modules
+    
     -- Check that G and X are complexes over the same ring
     R := ring G;
     if not(R === ring X) then error "expected complexes over the same ring";
     
-    -- JL: This is overkill, we only need the degree 0 piece, as well as the maps (to and) from 0
     -- The Hom-sets in D(Mod(R)) are the homology of H
     H := Hom(G,X);
+    -- FIXME: We only need H in degrees [-1,1], currently Hom does not allow for this
     
     -- Collect the generators of H_0(H), they are maps G -> X
-    -- JL: There are two ways to compute them, via the homology or the kernel. Need to run more test to see which is more efficient.
+    -- TODO: There are two ways to compute the generators: using the kernel or using the homology
+    --       Not sure which is more efficient
     -- Using the kernel
     K := trim ker H.dd_0;
+    local h;
+    local Q;
+    if opts.HomogeneousMaps then (
+        h = inducedMap(H_0,K)*basis(0,K);
+        Q = source h;
+    ) else (
+        Q = cover K;
+        h = inducedMap(H_0,K)*map(K,Q,id_Q);
+    );
     
+    -- Using the homology (not adjusted for HomogeneousMaps)
+    -- K := trim ker H.dd_0;
+    -- L := trim HH_0 H;
+    -- Q := cover L;
+    -- h := inducedMap(H_0,K) * (map(L,Q,id_Q) // inducedMap(L,K));
+    
+    -- for each generator of Q pick the corresponding map G -> X
+    generatorToMorphism := (j) -> homomorphism(map(H,(complex R^1),k -> if k==0 then map(H_0,R^1,h*Q_{j})));
+    
+    -- Combine all the maps G -> X
+    return fold((a,b) -> a | b,map(X,(complex (ring G)^0),0),apply(toList(0..(rank Q-1)),j -> generatorToMorphism(j)))
+)
+
+-- Creates a right R-approximation
+rightApproximation(Complex,ZZ) := ComplexMap => opts -> (X,n) -> (
+    R := ring X;
+    
+    -- using the kernel
+    Q := cover ker X.dd_n;
+    
+    local h;
+    if opts.HomogeneousMaps then (
+        h = inducedMap(X_n,ker X.dd_n)*map(ker X.dd_n,Q,id_Q)*basis(0,Q);
+        Q = source h;
+    ) else (
+        h = inducedMap(X_n,ker X.dd_n)*map(ker X.dd_n,Q,id_Q);
+    );
+    
+    -- Construct map Q -> X
+    return map(X, (complex Q)[-n],hashTable{n => h});
+)
+
+---------------------------------------------------------------
+-- Construct a left G-approximation
+---------------------------------------------------------------
+leftApproximation = method( TypicalValue => ComplexMap,
+                            Options => { HomogeneousMaps => false } );
+
+leftApproximation(Complex,Complex) := ComplexMap => opts -> (G,X) -> (
+    -- Input: X needs to be a complex of projective or free modules
+    
+    -- Check that G and X are complexes over the same ring
+    R := ring G;
+    if not(R === ring X) then error "expected complexes over the same ring";
+    
+    -- The Hom-sets in D(Mod(R)) are the homology of H
+    H := Hom(X,G);
+    -- FIXME: We only need H in degrees [-1,1], currently Hom does not allow for this
+    
+    -- Collect the generators of H_0(H), they are maps X -> G
+    -- TODO: There are two ways to compute the generators: using the kernel or using the homology
+    --       Not sure which is more efficient
+    -- Using the kernel
+    K := trim ker H.dd_0;
     local h;
     local Q;
     if opts.HomogeneousMaps then (
@@ -87,63 +153,20 @@ rightApproximation(Complex,Complex) := ComplexMap => opts -> (G,X) -> (
     -- Q := cover L;
     -- h := inducedMap(H_0,K) * (map(L,Q,id_Q) // inducedMap(L,K));
     
-    -- for each generator of Q pick the corresponding map G -> X
-    generatorToMorphism := (j) -> homomorphism(map(H,(complex R^1),k -> if k==0 then map(H_0,R^1,h*Q_{j})));
-    
-    -- Combine all the maps G -> X
-    return fold((a,b) -> a | b,map(X,G,0),apply(toList(0..(rank Q-1)),j -> generatorToMorphism(j)))
-)
-
--- Creates a right R-approximation
-rightApproximation(Complex,ZZ) := ComplexMap => opts -> (X,n) -> (
-    R := ring X;
-    
-    Q := fold((a,b) -> a ++ b,complex R^0,apply(toList((min X)..n),i -> complex(cover ker X.dd_i)[-i]));
-    
-    -- Construct map Q -> X
-    fun := i -> if (i >= min X or i <= n) then inducedMap(X_i,ker X.dd_i)*map(ker X.dd_i,Q_i,id_(Q_i)) else map(R^0,X_i);
-    
-    return map(X,Q,fun);
-    
-    -- something is wrong!!
-    -- return map(X,complex(R^1,Base => n), k -> if k == 0 then inducedMap(X_n,ker X.dd_n) * coverMap ker X.dd_n)
-)
-
----------------------------------------------------------------
--- Construct a left G-approximation
----------------------------------------------------------------
-leftApproximation = method( TypicalValue => ComplexMap,
-                            Options => { HomogeneousMaps => false } );
-
--- JL: Basically the same code as for rightApproximation, make an auxiliary method?
-leftApproximation(Complex,Complex) := ComplexMap => opts -> (G,X) -> (
-    -- Input: X needs to be a complex of projective or free modules
-    -- Check that G and X are complexes over the same ring
-    R := ring G;
-    if not(R === ring X) then error "expected complexes over the same ring";
-    
-    -- JL: This is overkill, we only need the degree 0 piece, as well as the maps (to and) from 0
-    -- The Hom-sets in D(Mod(R)) are the homology of H
-    H := Hom(X,G);
-    
-    -- Collect the generators of H_0(H), they are maps X -> G
-    -- JL: There are two ways to compute them, via the homology or the kernel. Need to run more test to see which is more efficient.
-    -- Using the kernel
-    K := trim ker H.dd_0;
-    Q := cover K;
-    h := inducedMap(H_0,K)*map(K,Q,id_Q);
-    
-    -- Using the homology
-    -- K := trim ker H.dd_0;
-    -- L := trim HH_0 H;
-    -- Q := cover L;
-    -- h := inducedMap(H_0,K) * (map(L,Q,id_Q) // inducedMap(L,K));
-    
     -- for each generator of Q pick the corresponding map X -> G
-    generatorToMorphism := (j) -> homomorphism(map(H,(complex R^1),k -> if k==0 then map(H_0,R^1,h*Q_{j})));
+    generatorToMorphism := (j) -> (
+        f := homomorphism(map(H,(complex source Q_{j}),k -> if k==0 then h*Q_{j}));
+        
+        -- f might not have internal degree 0, when possible fix this
+        (a,b) := concentration f;
+        if same apply(toList(a..b),d -> degree f_d) then (
+            f = map(R^{degree f_a} ** G,X,f);
+        );
+        return f;
+    );
     
     -- Combine all the maps X -> G
-    return fold((a,b) -> a || b,map(G,X,0),apply(toList(0..(rank Q-1)),j -> generatorToMorphism(j)))
+    return fold((a,b) -> a || b,map(complex (ring G)^0,X,0),apply(toList(0..(rank Q-1)),j -> generatorToMorphism(j)))
 )
 
 ---------------------------------------------------------------
@@ -235,6 +258,7 @@ level(Complex,Complex,List) := ZZ => opts -> (G,X,L) -> (
     homogeneous := isHomogeneous X;
     if (opts.Strategy == "coghost") then ( -- Coghost maps
         -- As long as the composition of the ghost maps g is non-zero, continue
+        -- FIXME: this returns the wrong answer
         while ((not isNullHomotopic g) and (n < opts.MaxLevelAttempts)) do (
             rX = f.source;
             f = coghost(rG,rX, HomogeneousMaps => opts.HomogeneousMaps);
@@ -1344,11 +1368,15 @@ doc ///
     Key
         HomogeneousMaps
         [level,HomogeneousMaps]
+        [ghost,HomogeneousMaps]
+        [coghost,HomogeneousMaps]
+        [leftApproximation,HomogeneousMaps]
+        [rightApproximation,HomogeneousMaps]
     Headline
         decides whether computations are executed in the category of graded modules or category of modules
     Usage
-        level(..., HomogeneousMaps => true)
-        level(..., HomogeneousMaps => false)
+        (..., HomogeneousMaps => true)
+        (..., HomogeneousMaps => false)
     Description
         Text
             The default value is false. When HomogeneousMaps is true, then there are less chain maps, and for generation twists of the generator might be necessary.
