@@ -1,13 +1,13 @@
 newPackage(
     "ThickSubcategories",
-    Version => "1.0", 
-    Date => "August 27, 2020",
+    Version => "1.1", 
+    Date => "May 17, 2024",
     Authors => {
-        {Name => "Eloisa Grifo", Email => "eloisa.grifo@ucr.edu", HomePage => "http://www-personal.umich.edu/~grifo/"},
+        {Name => "Eloisa Grifo", Email => "eloisa.grifo@unl.edu", HomePage => "https://eloisagrifo.github.io"},
         {Name => "Janina C. Letz", Email => "jletz@math.uni-bielefeld.de", HomePage => "http://www.math.uni-bielefeld.de/~jletz"},
         {Name => "Josh Pollitz", Email => "pollitz@math.utah.edu", HomePage => "http://www.math.utah.edu/~pollitz"}
     },
-    Headline => "Computing levels of complexes",
+    Headline => "Computing levels of complexes and support varieties of complexes",
     DebuggingMode => true
 )
 
@@ -21,6 +21,8 @@ export {
     "RankVariety",
     "RankVarietyFast",
     "Koszul",
+    "NumberOfMinors",
+    "Attempts",
     -- Methods
     "ghost",
     "coghost",
@@ -36,7 +38,8 @@ export {
 --    "findgs",
     "restrict",
     "exts",
-    "supportMatrices"
+    "supportMatrices",
+    "quickMinors"
 }
 
 needsPackage "CompleteIntersectionResolutions"
@@ -358,6 +361,22 @@ isPerfect(Module) := Boolean => (M) -> (
 -- Compute the support variety of a complex
 ---------------------------------------------------------------
 
+--minors
+
+quickMinors = method( TypicalValue => Ideal, Options => {NumberOfMinors => 10, Attempts => 5})
+quickMinors(ZZ,Matrix) := Ideal => opts -> (n,M) -> (
+    
+     J := chooseGoodMinors(opts.NumberOfMinors, n, M, Strategy => StrategyDefaultNonRandom);
+     
+     for i from 1 to opts.Attempts do (
+	 J = J + chooseGoodMinors(opts.NumberOfMinors, n, M, Strategy => StrategyDefaultNonRandom);
+	 );
+
+     J
+     )
+ 
+ 
+
 
 --auxiliary functions
 
@@ -393,7 +412,7 @@ degreeij(HashTable,List,RingMap,HashTable) := Matrix => (L,degs,QtoS,ranks) -> (
 
 
 
-
+--what is this supposed to be?!
 exts = method( );
 
 exts(Module) := List => Y -> (
@@ -436,6 +455,7 @@ supportVariety = method( TypicalValue => Ideal,
                          Options => { Strategy => RankVarietyFast } );
 
 supportVariety(Complex) := Ideal => opts -> (X) -> (
+   
     if opts.Strategy === RankVariety then (
 	R := ring X;
 	I := ideal R;
@@ -446,25 +466,45 @@ supportVariety(Complex) := Ideal => opts -> (X) -> (
 	H := higherHomotopies(flatten entries gens I, Pi,floor((length M + 1)/2));
 	mu := numgens I;
 	Qvars := Q_*;
+
 	a := getSymbol "a";
 	S := k(monoid[(Qvars | toList(a_1..a_mu))]);
+	
 	--Produces a polynomial ring with twice as many variables as R.  
 	--The peculiar notation in the previous two lines
 	--is required to ensure that the variables of S are hidden from the user.
 	--In particular, the variables in Q_* are
 	--still recognized as variables of Q and not S, 
 	--and the code will not break if the variables in Q happen to be called
-	--old bad code:
---	a := getSymbol"a";
---	S := Q[a_1 .. a_mu];
+
     	QtoS := map(S,Q,drop(S_*,-mu));
-	T := S/ideal drop(S_*,-mu);
+
 	odds := select(toList(min M .. max M), o -> odd(o));
 	evens := select(toList(min M .. max M), o -> even(o));
-	toeven := matrix table(evens, odds, (j,i) -> degreeij(H, {i,j}, QtoS, M.module)) ** T;
-	toodd := matrix table(odds, evens, (j,i) -> degreeij(H, {i,j}, QtoS, M.module)) ** T;
-    	toodd = compress toodd;
-	return radical minors(rank ker toeven, toodd)
+	--old code:
+--      Qvars := Q_*;
+--	S := k(monoid[(Qvars | toList(a_1..a_mu))]);
+
+--    	QtoS := map(S,Q,drop(S_*,-mu));
+--	T := S/ideal drop(S_*,-mu);
+--    	toeven := matrix table(evens, odds, (j,i) -> degreeij(H, {i,j}, QtoS, M.module)) ** T;
+--      toodd := matrix table(odds, evens, (j,i) -> degreeij(H, {i,j}, QtoS, M.module)) ** T;
+
+	toeven := matrix table(evens, odds, (j,i) -> degreeij(H, {i,j}, QtoS, M.module));
+	toodd := matrix table(odds, evens, (j,i) -> degreeij(H, {i,j}, QtoS, M.module));
+	T := k(monoid[toList(a_1..a_mu)]);
+	StoT := map(T,S, toList(#Qvars : 0_T) | T_*);
+	toeven = StoT(toeven);
+	toodd = StoT(toodd);
+  
+    	reven := rank target toeven - rank toeven;
+	rodd := rank target toodd - rank toodd;
+
+	toodd = transpose compress transpose compress toodd;
+	toeven = transpose compress transpose compress toeven;
+
+    	return radical intersect(minors(reven, toodd), minors(rodd, toeven))
+
 	);
 
     if opts.Strategy === RankVarietyFast then (
@@ -475,10 +515,12 @@ supportVariety(Complex) := Ideal => opts -> (X) -> (
 	Pi = resolutionMap(restrict(X,Q));
 	M = source Pi;
 	H = higherHomotopies(flatten entries gens I, Pi,floor((length M + 1)/2));
+
 	mu = numgens I;
 	Qvars = Q_*;
 	a = getSymbol "a";
 	S = k(monoid[(Qvars | toList(a_1..a_mu))]);
+
 	--Produces a polynomial ring with twice as many variables as R.  
 	--The peculiar notation in the previous two lines
 	--is required to ensure that the variables of S are hidden from the user.
@@ -488,18 +530,31 @@ supportVariety(Complex) := Ideal => opts -> (X) -> (
 	--old bad code:
 --	a := getSymbol"a";
 --	S := Q[a_1 .. a_mu];
+
     	QtoS = map(S,Q,drop(S_*,-mu));
-	T = S/ideal drop(S_*,-mu);
+
 	odds = select(toList(min M .. max M), o -> odd(o));
 	evens = select(toList(min M .. max M), o -> even(o));
-	toeven = matrix table(evens, odds, (j,i) -> degreeij(H, {i,j}, QtoS, M.module)) ** T;
-	toodd = matrix table(odds, evens, (j,i) -> degreeij(H, {i,j}, QtoS, M.module)) ** T;
-    	r := rank ker toeven;
-	toodd = compress toodd;
-	toodd = transpose compress transpose toodd;
-	N := binomial(rank source toodd,r)*binomial(rank target toodd,r);
-	(if (100000 > 0.01*N) and (0.01*N > 10000) then N = ceiling(0.01*N) else N = min(N,2000));
-    	return ideal mingens chooseGoodMinors(N,r,toodd)
+
+	toeven = matrix table(evens, odds, (j,i) -> degreeij(H, {i,j}, QtoS, M.module));
+	toodd = matrix table(odds, evens, (j,i) -> degreeij(H, {i,j}, QtoS, M.module));
+
+	toeven := matrix table(evens, odds, (j,i) -> degreeij(H, {i,j}, QtoS, M.module));
+	toodd := matrix table(odds, evens, (j,i) -> degreeij(H, {i,j}, QtoS, M.module));
+
+	T := k(monoid[toList(a_1..a_mu)]);
+	StoT := map(T,S, toList(#Qvars : 0_T) | T_*);
+
+	toeven = StoT(toeven);
+	toodd = StoT(toodd);
+	
+    	reven := rank target toeven - rank toeven;
+	rodd := rank target toodd - rank toodd;
+
+	toodd = transpose compress transpose compress toodd;
+	toeven = transpose compress transpose compress toeven;
+
+    	return radical intersect(quickMinors(reven, toodd), quickMinors(rodd, toeven))
 	);
 
     
@@ -531,15 +586,25 @@ supportMatrices(Complex) := Ideal => X -> (
     M := source Pi;
     H := higherHomotopies(flatten entries gens I, Pi,floor((length M + 1)/2));
     mu := numgens I;
+   
     Qvars := Q_*;
     a := getSymbol "a";
+    
     S := k(monoid[(Qvars | toList(a_1..a_mu))]);
     QtoS := map(S,Q,drop(S_*,-mu));
-    T := S/ideal drop(S_*,-mu);
+
     odds := select(toList(min M .. max M), o -> odd(o));
     evens := select(toList(min M .. max M), o -> even(o));
-    toeven := matrix table(evens, odds, (j,i) -> degreeij(H, {i,j}, QtoS, M.module)) ** T;
-    toodd := matrix table(odds, evens, (j,i) -> degreeij(H, {i,j}, QtoS, M.module)) ** T;
+    
+    toeven := matrix table(evens, odds, (j,i) -> degreeij(H, {i,j}, QtoS, M.module));
+    toodd := matrix table(odds, evens, (j,i) -> degreeij(H, {i,j}, QtoS, M.module));
+    
+    T := k(monoid[toList(a_1..a_mu)]);
+    StoT := map(T,S, toList(#Qvars : 0_T) | T_*);
+   
+    toeven = StoT(toeven);
+    toodd = StoT(toodd);
+	
     {toeven, toodd}
 )
 
