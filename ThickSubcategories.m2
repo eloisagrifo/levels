@@ -183,7 +183,7 @@ ghost(Complex,Complex,List) := ComplexMap => opts -> (G,X,L) -> (
     -- Input: G needs to be a complex of projective or free modules
     -- Input: L is a list of integers
     
-    f := fold((a,b) -> a | b,apply(L,n -> rightApproximation(G[-n],X, HomogeneousMaps => opts.HomogeneousMaps)));
+    f := fold((a,b) -> a | b,flatten apply(L,n -> apply(components(G[-n]), C -> rightApproximation(C,X, HomogeneousMaps => opts.HomogeneousMaps))));
     
     return canonicalMap(cone(f),X)
 )
@@ -217,7 +217,7 @@ coghost(Complex,Complex,List) := ComplexMap => opts -> (G,X,L) -> (
     -- Input: X needs to be a complex of projective or free modules
     -- Input: L is a list of integers
     
-    f := fold((a,b) -> a || b,apply(L,n -> leftApproximation(G[n],X, HomogeneousMaps => opts.HomogeneousMaps)));
+    f := fold((a,b) -> a || b,flatten apply(L,n -> apply(components(G[-n]), C -> leftApproximation(C,X, HomogeneousMaps => opts.HomogeneousMaps))));
     
     return canonicalMap(X[-1],cone(f))[1]
 )
@@ -252,7 +252,7 @@ level(Complex,Complex,List) := ZZ => opts -> (G,X,L) -> (
     if (X == 0) then return 0; -- needed because resolution does not work for the zero complex
     
     -- We need G to be a complex of free/projective modules to compute Ext
-    rG := resolution(G, LengthLimit => opts.LengthLimitGenerator);
+    rG := if isFree G then naiveTruncation(G,,opts.LengthLimitGenerator) else resolution(G, LengthLimit => opts.LengthLimitGenerator);
     -- We need X to be a complex of free/projective modules, so that any map from X is zero iff it is null homotopic
     rX := resolution(X, LengthLimit => opts.LengthLimit);
     n := 0;
@@ -264,7 +264,7 @@ level(Complex,Complex,List) := ZZ => opts -> (G,X,L) -> (
         -- FIXME: this returns the wrong answer
         while ((not isNullHomotopic g) and (n < opts.MaxLevelAttempts)) do (
             rX = f.source;
-            f = coghost(rG,rX, HomogeneousMaps => opts.HomogeneousMaps);
+            f = coghost(rG,rX,L, HomogeneousMaps => opts.HomogeneousMaps);
             
             g = g*f;
             n = n+1;
@@ -321,11 +321,13 @@ level(Module,List) := ZZ => opts -> (M,L) -> (
 )
 
 level(Module,Module,List) := ZZ => opts -> (M,N,L) -> (
-    level(complex(M),complex(N),L, MaxLevelAttempts => opts.MaxLevelAttempts, LengthLimit => opts.LengthLimit, LengthLimitGenerator => opts.LengthLimitGenerator, Strategy => opts.Strategy, HomogeneousMaps => opts.HomogeneousMaps)
+    G := directSum(apply(components(M),C -> complex(C)));
+    level(G,complex(N),L, MaxLevelAttempts => opts.MaxLevelAttempts, LengthLimit => opts.LengthLimit, LengthLimitGenerator => opts.LengthLimitGenerator, Strategy => opts.Strategy, HomogeneousMaps => opts.HomogeneousMaps)
 )
 
 level(Module,Complex,List) := ZZ => opts -> (M,X,L) -> (
-    level(complex(M),X,L, MaxLevelAttempts => opts.MaxLevelAttempts, LengthLimit => opts.LengthLimit, LengthLimitGenerator => opts.LengthLimitGenerator, Strategy => opts.Strategy, HomogeneousMaps => opts.HomogeneousMaps)
+    G := directSum(apply(components(M),C -> complex(C)));
+    level(G,X,L, MaxLevelAttempts => opts.MaxLevelAttempts, LengthLimit => opts.LengthLimit, LengthLimitGenerator => opts.LengthLimitGenerator, Strategy => opts.Strategy, HomogeneousMaps => opts.HomogeneousMaps)
 )
 
 level(Complex,Module,List) := ZZ => opts -> (G,N,L) -> (
@@ -539,17 +541,17 @@ supportVariety(Complex) := Ideal => opts -> (X) -> (
 	toeven = matrix table(evens, odds, (j,i) -> degreeij(H, {i,j}, QtoS, M.module));
 	toodd = matrix table(odds, evens, (j,i) -> degreeij(H, {i,j}, QtoS, M.module));
 
-	toeven := matrix table(evens, odds, (j,i) -> degreeij(H, {i,j}, QtoS, M.module));
-	toodd := matrix table(odds, evens, (j,i) -> degreeij(H, {i,j}, QtoS, M.module));
+	toeven = matrix table(evens, odds, (j,i) -> degreeij(H, {i,j}, QtoS, M.module));
+	toodd = matrix table(odds, evens, (j,i) -> degreeij(H, {i,j}, QtoS, M.module));
 
-	T := k(monoid[toList(a_1..a_mu)]);
-	StoT := map(T,S, toList(#Qvars : 0_T) | T_*);
+	T = k(monoid[toList(a_1..a_mu)]);
+	StoT = map(T,S, toList(#Qvars : 0_T) | T_*);
 
 	toeven = StoT(toeven);
 	toodd = StoT(toodd);
 	
-    	reven := rank target toeven - rank toeven;
-	rodd := rank target toodd - rank toodd;
+    	reven = rank target toeven - rank toeven;
+	rodd = rank target toodd - rank toodd;
 
 	toodd = transpose compress transpose compress toodd;
 	toeven = transpose compress transpose compress toeven;
@@ -1452,8 +1454,10 @@ doc ///
             X = freeResolution(R^1/ideal(x,y))
             level(G,X,{0,1,2})
             level(G,X,{0,1,2},HomogeneousMaps => true, MaxLevelAttempts => 5)
-            G2 = complex R^{0,-1,-2}
+            G2 = directSum apply({0,-1,-2}, d -> complex R^{d})
             level(G2,X,{0,1,2},HomogeneousMaps => true)
+        Text
+            The computation is faster if the generator is given as a direct sum.
     SeeAlso
         coghost
         ghost
@@ -1790,6 +1794,7 @@ TEST ///
     R = QQ[x,y,z]
     F = freeResolution (R^2)
     assert(level(F,{0}) == 1)
+    assert(level(F,{0},Strategy => "coghost") == 1)
 ///
 
 TEST ///
@@ -1798,6 +1803,7 @@ TEST ///
     G = complex (R^2)
     F = G ++ G[1] ++ G[-1]
     assert(level(F,{-1,0,1}) == 1)
+    assert(level(F,{-1,0,1},Strategy => "coghost") == 1)
 ///
 
 TEST ///
@@ -1806,6 +1812,7 @@ TEST ///
     I = ideal vars R
     F = freeResolution(R^1/I)
     assert(level(F,{0,1,2,3}) == 4)
+    assert(level(F,{0,1,2,3},Strategy => "coghost") == 4)
 ///
 
 TEST ///
@@ -1814,6 +1821,7 @@ TEST ///
     I = ideal vars R
     F = freeResolution(R^1/I)[-3]
     assert(level(F,{3,4,5,6}) == 4)
+    assert(level(F,{3,4,5,6},Strategy => "coghost") == 4)
 ///
 
 TEST ///
@@ -1822,6 +1830,7 @@ TEST ///
     I = ideal vars R
     F = freeResolution(R^1/I^2)
     assert(level(F,{0,1,2,3}) == 4)
+    assert(level(F,{0,1,2,3},Strategy => "coghost") == 4)
 ///
 
 TEST ///
@@ -1830,6 +1839,7 @@ TEST ///
     G = freeResolution(R^1/ideal(x))
     X = freeResolution(R^1/ideal(x,y^2))
     assert(level(G,X,{0,1}) == 2)
+    assert(level(G,X,{0,1},Strategy => "coghost") == 2)
 ///
 
 TEST ///
@@ -1839,13 +1849,18 @@ TEST ///
     X = complex R^{-1}
     
     assert(level(G,X,{0}) == 1)
+    assert(level(G,X,{0},Strategy => "coghost") == 1)
     assert(level(G,X,{0},HomogeneousMaps => true, MaxLevelAttempts => 5) == 5)
+    assert(level(G,X,{0},Strategy => "coghost",HomogeneousMaps => true, MaxLevelAttempts => 5) == 5)
     
     Y = freeResolution(R^1/ideal(x,y))
     assert(level(G,Y,{0,1,2}) == 3)
+    assert(level(G,Y,{0,1,2},Strategy => "coghost") == 3)
     assert(level(G,Y,{0,1,2},HomogeneousMaps => true, MaxLevelAttempts => 5) == 5)
-    G2 = complex R^{0,-1,-2}
+    assert(level(G,Y,{0,1,2},Strategy => "coghost",HomogeneousMaps => true, MaxLevelAttempts => 5) == 5)
+    G2 = complex directSum({R^{0},R^{-1},R^{-2}})
     assert(level(G2,Y,{0,1,2},HomogeneousMaps => true) == 3)
+    assert(level(G2,Y,{0,1,2},Strategy => "coghost",HomogeneousMaps => true) == 3)
 ///
 
 end
