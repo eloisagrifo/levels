@@ -676,7 +676,7 @@ isBuilt(Module,Complex) := Boolean =>  opts -> (M,G) -> (
 )
 
 ---------------------------------------------------------------
--- Rectriction to scalars of modules, complexes, maps
+-- Rectriction of scalars of modules, complexes, maps
 ---------------------------------------------------------------
 
 restrict = method();
@@ -901,7 +901,7 @@ higherHomotopies(Complex) := X -> (
     Pi := resolutionMap(restrict(X,Q));
     M := source Pi;
     higherHomotopies(flatten entries gens I, Pi,floor((length M + 1)/2))
-    )
+)
 
 higherHomotopies(Module) := M -> higherHomotopies(complex(M))
     
@@ -1174,6 +1174,70 @@ doc ///
             [BvdB03] Alexey I. Bondal and Michel van den Bergh, {\em Generators and representability of functors in commutative and noncommutative geometry}, Mosc. Math. J. {\bf 3} (2003), no.~1, 1–36, 258. 
             
             [Chr98] J. Daniel Christensen. {\em Ideals in triangulated categories: phantoms, ghosts and skeleta}, Adv. Math., 136(2):284–339, 1998.
+///
+
+doc ///
+    Key
+        rightApproximation
+        (rightApproximation, Complex, Complex)
+        (rightApproximation, Complex, ZZ)
+    Headline
+        constructs a right approximation
+    Usage
+        rightApproximation(G,X)
+        rightApproximation(X,n)
+    Inputs
+        X:Complex
+        G:Complex
+        n:ZZ
+    Outputs
+        :ComplexMap
+            a map with target $X$ through which every map G -> X factors
+    Description
+        Text
+            A map $f \colon H \to X$ is a right approximation with respect to $G$ if every map $G \to X$ factors through $f$ in the homotopy category. 
+        Example
+            needsPackage "Complexes";
+            R = QQ[x]
+            X = freeResolution(R^1/ideal(x^2))
+            G = freeResolution(R^1/ideal(x))
+            f = rightApproximation(G,X)
+        Text
+            When an integer is given, then $G = R[-n]$. 
+        Example
+            needsPackage "Complexes";
+            R = QQ[x]
+            X = freeResolution(R^1/ideal(x^2))
+            f = rightApproximation(X,1)
+    SeeAlso
+        leftApproximation
+///
+
+doc ///
+    Key
+        leftApproximation
+        (leftApproximation, Complex, Complex)
+    Headline
+        constructs a left approximation
+    Usage
+        leftApproximation(G,X)
+    Inputs
+        X:Complex
+        G:Complex
+    Outputs
+        :ComplexMap
+            a map with source $X$ through which every map X -> G factors
+    Description
+        Text
+            A map $f \colon X \to H$ is a left approximation with respect to $G$ if every map $X \to G$ factors through $f$ in the homotopy category. 
+        Example
+            needsPackage "Complexes";
+            R = QQ[x]
+            X = freeResolution(R^1/ideal(x^2))
+            G = freeResolution(R^1/ideal(x))
+            f = leftApproximation(G,X)
+    SeeAlso
+        rightApproximation
 ///
 
 doc ///
