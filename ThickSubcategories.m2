@@ -72,25 +72,17 @@ rightApproximation(Complex,Complex) := ComplexMap => opts -> (G,X) -> (
     -- FIXME: We only need H in degrees [-1,1], currently Hom does not allow for this
     
     -- Collect the generators of H_0(H), they are maps G -> X
-    -- TODO: There are two ways to compute the generators: using the kernel or using the homology
-    --       Not sure which is more efficient
-    -- Using the kernel
     K := trim ker H.dd_0;
+    L := trim HH_0 H;
     local h;
     local Q;
     if opts.HomogeneousMaps then (
-        h = inducedMap(H_0,K)*basis(0,K);
+        h = inducedMap(H_0,K) * (basis(0,L) // inducedMap(L,K));
         Q = source h;
     ) else (
-        Q = cover K;
-        h = inducedMap(H_0,K)*map(K,Q,id_Q);
+        Q = cover L;
+        h = inducedMap(H_0,K) * (map(L,Q,id_Q) // inducedMap(L,K));
     );
-    
-    -- Using the homology (not adjusted for HomogeneousMaps)
-    -- K := trim ker H.dd_0;
-    -- L := trim HH_0 H;
-    -- Q := cover L;
-    -- h := inducedMap(H_0,K) * (map(L,Q,id_Q) // inducedMap(L,K));
     
     -- for each generator of Q pick the corresponding map G -> X
     generatorToMorphism := (j) -> homomorphism(map(H,(complex R^1),k -> if k==0 then map(H_0,R^1,h*Q_{j})));
@@ -103,15 +95,17 @@ rightApproximation(Complex,Complex) := ComplexMap => opts -> (G,X) -> (
 rightApproximation(Complex,ZZ) := ComplexMap => opts -> (X,n) -> (
     R := ring X;
     
-    -- using the kernel
-    Q := cover ker X.dd_n;
-    
+    -- Collect generators of HH_n(X)
+    K := trim ker X.dd_n;
+    L := trim HH_n X;
     local h;
+    local Q;
     if opts.HomogeneousMaps then (
-        h = inducedMap(X_n,ker X.dd_n)*map(ker X.dd_n,Q,id_Q)*basis(0,Q);
+        h = inducedMap(X_n,K) * (basis(0,L) // inducedMap(L,K));
         Q = source h;
     ) else (
-        h = inducedMap(X_n,ker X.dd_n)*map(ker X.dd_n,Q,id_Q);
+        Q = cover K;
+        h = inducedMap(X_n,K)*map(K,Q,id_Q);
     );
     
     -- Construct map Q -> X
@@ -136,25 +130,17 @@ leftApproximation(Complex,Complex) := ComplexMap => opts -> (G,X) -> (
     -- FIXME: We only need H in degrees [-1,1], currently Hom does not allow for this
     
     -- Collect the generators of H_0(H), they are maps X -> G
-    -- TODO: There are two ways to compute the generators: using the kernel or using the homology
-    --       Not sure which is more efficient
-    -- Using the kernel
     K := trim ker H.dd_0;
+    L := trim HH_0 H;
     local h;
     local Q;
     if opts.HomogeneousMaps then (
-        h = inducedMap(H_0,K)*basis(0,K);
+        h = inducedMap(H_0,K) * (basis(0,L) // inducedMap(L,K));
         Q = source h;
     ) else (
-        Q = cover K;
-        h = inducedMap(H_0,K)*map(K,Q,id_Q);
+        Q = cover L;
+        h = inducedMap(H_0,K) * (map(L,Q,id_Q) // inducedMap(L,K));
     );
-    
-    -- Using the homology
-    -- K := trim ker H.dd_0;
-    -- L := trim HH_0 H;
-    -- Q := cover L;
-    -- h := inducedMap(H_0,K) * (map(L,Q,id_Q) // inducedMap(L,K));
     
     -- for each generator of Q pick the corresponding map X -> G
     generatorToMorphism := (j) -> (
