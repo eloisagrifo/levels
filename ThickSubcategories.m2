@@ -351,8 +351,10 @@ isPerfect(Module) := Boolean => (M) -> (
 
 --minors
 
-quickMinors = method( TypicalValue => Ideal, Options => {NumberOfMinors => 10, Attempts => 5})
+quickMinors = method( TypicalValue => Ideal, Options => {NumberOfMinors => 10, Attempts => 5} )
 quickMinors(ZZ,Matrix) := Ideal => opts -> (n,M) -> (
+    
+    if M == 0 then return ideal(0_(ring M));
     
      J := chooseGoodMinors(opts.NumberOfMinors, n, M, Strategy => StrategyDefaultNonRandom);
      
