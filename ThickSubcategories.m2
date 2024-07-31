@@ -98,14 +98,15 @@ rightApproximation(Complex,ZZ) := ComplexMap => opts -> (X,n) -> (
     -- Collect generators of HH_n(X)
     K := trim ker X.dd_n;
     L := trim HH_n X;
+
     local h;
     local Q;
     if opts.HomogeneousMaps then (
         h = inducedMap(X_n,K) * (basis(0,L) // inducedMap(L,K));
         Q = source h;
     ) else (
-        Q = cover K;
-        h = inducedMap(X_n,K)*map(K,Q,id_Q);
+        Q = cover L;
+        h = inducedMap(X_n,K)*( map(L,Q,id_Q) // inducedMap(L,K));
     );
     
     -- Construct map Q -> X
