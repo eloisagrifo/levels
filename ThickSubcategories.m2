@@ -77,6 +77,7 @@ rightApproximation(Complex,Complex) := ComplexMap => opts -> (G,X) -> (
     local h;
     local Q;
     if opts.HomogeneousMaps then (
+        -- FIXME: Use DegreeLimit in Hom to only compute degree 0 parts (DegreeLimit is newish)
         h = inducedMap(H_0,K) * (basis(0,L) // inducedMap(L,K));
         Q = source h;
     ) else (
@@ -350,28 +351,28 @@ isPerfect(Module) := Boolean => (M) -> (
 -- Compute the support variety of a complex
 ---------------------------------------------------------------
 
---minors
+-- minors
+quickMinors = method( TypicalValue => Ideal,
+                      Options => { NumberOfMinors => 10,
+                                   Attempts => 5} )
 
-quickMinors = method( TypicalValue => Ideal, Options => {NumberOfMinors => 10, Attempts => 5} )
 quickMinors(ZZ,Matrix) := Ideal => opts -> (n,M) -> (
     
-    if M == 0 then return ideal(0_(ring M));
+    J := ideal(0_(ring M));
+    if M == 0 then return J;
     
-     J := chooseGoodMinors(opts.NumberOfMinors, n, M, Strategy => StrategyDefaultNonRandom);
-     
-     for i from 1 to opts.Attempts do (
-	 J = J + chooseGoodMinors(opts.NumberOfMinors, n, M, Strategy => StrategyDefaultNonRandom);
-	 );
+    -- JL: Why call the same function multiple times? Is this given something different than just directly taking more minors?
+    for i from 1 to opts.Attempts do (
+        J = J + chooseGoodMinors(opts.NumberOfMinors, n, M, Strategy => StrategyDefaultNonRandom);
+    );
+    
+    return J;
+)
 
-     J
-     )
- 
- 
-
-
---auxiliary functions
-
+-- auxiliary functions
+-- JL: What does this function do?
 mapwithvars = method()
+
 mapwithvars(List,Matrix,RingMap) := Matrix => (k,Mat,QtoS) -> (
     mat := QtoS ** Mat;
     S := target QtoS;
@@ -379,9 +380,11 @@ mapwithvars(List,Matrix,RingMap) := Matrix => (k,Mat,QtoS) -> (
     list2 := take(S_*,#Q_* - #S_*);
     o := apply(pack(2,mingle(k_0,list2)), w -> (w_1)^(w_0));
     product(o)*mat
-    )
+)
 
+-- JL: What does this function do?
 degreeij = method()
+
 degreeij(HashTable,List,RingMap,HashTable) := Matrix => (L,degs,QtoS,ranks) -> (
     
     i := degs_0;--starting point
@@ -392,50 +395,50 @@ degreeij(HashTable,List,RingMap,HashTable) := Matrix => (L,degs,QtoS,ranks) -> (
     
     S := target QtoS;
     
-    if (i > (j+1)) then map(S^ending, S^starting,0)  --replaces the negative differentials with zero
+    if (i > (j+1)) then
+        map(S^ending, S^starting,0)  --replaces the negative differentials with zero
     else (
-	mykeys := select(keys L, 
-	    k -> (k_1 == i) and (2*sum(k_0) - 1 + k_1) == j);
---	w := apply(mykeys, k -> {k,L#k});
-	sum(apply(mykeys, k -> mapwithvars(k,L#k,QtoS)))
+        mykeys := select(keys L,
+            k -> (k_1 == i) and (2*sum(k_0) - 1 + k_1) == j);
+        -- w := apply(mykeys, k -> {k,L#k});
+        sum(apply(mykeys, k -> mapwithvars(k,L#k,QtoS)))
    )
 )
 
-
-
 --what is this supposed to be?!
+-- JL: No idea, you wrote it.
 exts = method( );
 
 exts(Module) := List => Y -> (
-	X := complex(Y);
-	R := ring X;
-	I := ideal R;
-	Q := ring I;
-	k := coefficientRing Q;
-	Pi := resolutionMap(restrict(X,Q));
-	M := source Pi;
-	H := higherHomotopies(flatten entries gens I, Pi,floor((length M + 1)/2));
-	mu := numgens I;
-	Qvars := Q_*;
-	a := getSymbol "a";
-	S := k(monoid[(Qvars | toList(a_1..a_mu))]);
-	--Produces a polynomial ring with twice as many variables as R.  
-	--The peculiar notation in the previous two lines
-	--is required to ensure that the variables of S are hidden from the user.
-	--In particular, the variables in Q_* are
-	--still recognized as variables of Q and not S, 
-	--and the code will not break if the variables in Q happen to be called
-	--old bad code:
---	a := getSymbol"a";
---	S := Q[a_1 .. a_mu];
-    	QtoS := map(S,Q,drop(S_*,-mu));
-	T := S/ideal drop(S_*,-mu);
-	odds := select(toList(min M .. max M), o -> odd(o));
-	evens := select(toList(min M .. max M), o -> even(o));
-	toeven := matrix table(evens, odds, (j,i) -> degreeij(H, {i,j}, QtoS, M.module)) ** T;
-	toodd := matrix table(odds, evens, (j,i) -> degreeij(H, {i,j}, QtoS, M.module)) ** T;
-    	return {toeven,toodd}
-	)
+    X := complex(Y);
+    R := ring X;
+    I := ideal R;
+    Q := ring I;
+    k := coefficientRing Q;
+    Pi := resolutionMap(restrict(X,Q));
+    M := source Pi;
+    H := higherHomotopies(flatten entries gens I, Pi,floor((length M + 1)/2));
+    mu := numgens I;
+    Qvars := Q_*;
+    a := getSymbol "a";
+    S := k(monoid[(Qvars | toList(a_1..a_mu))]);
+    --Produces a polynomial ring with twice as many variables as R.
+    --The peculiar notation in the previous two lines
+    --is required to ensure that the variables of S are hidden from the user.
+    --In particular, the variables in Q_* are
+    --still recognized as variables of Q and not S,
+    --and the code will not break if the variables in Q happen to be called
+    --old bad code:
+--    a := getSymbol"a";
+--    S := Q[a_1 .. a_mu];
+        QtoS := map(S,Q,drop(S_*,-mu));
+    T := S/ideal drop(S_*,-mu);
+    odds := select(toList(min M .. max M), o -> odd(o));
+    evens := select(toList(min M .. max M), o -> even(o));
+    toeven := matrix table(evens, odds, (j,i) -> degreeij(H, {i,j}, QtoS, M.module)) ** T;
+    toodd := matrix table(odds, evens, (j,i) -> degreeij(H, {i,j}, QtoS, M.module)) ** T;
+        return {toeven,toodd}
+    )
 
 
 
@@ -446,115 +449,68 @@ supportVariety = method( TypicalValue => Ideal,
                          Options => { Strategy => RankVarietyFast } );
 
 supportVariety(Complex) := Ideal => opts -> (X) -> (
-   
-    if opts.Strategy === RankVariety then (
-	R := ring X;
-	I := ideal R;
-	Q := ring I;
-	k := coefficientRing Q;
-	Pi := resolutionMap(restrict(X,Q));
-	M := source Pi;
-	H := higherHomotopies(flatten entries gens I, Pi,floor((length M + 1)/2));
-	mu := numgens I;
-	Qvars := Q_*;
-
-	a := getSymbol "a";
-	S := k(monoid[(Qvars | toList(a_1..a_mu))]);
-	
-	--Produces a polynomial ring with twice as many variables as R.  
-	--The peculiar notation in the previous two lines
-	--is required to ensure that the variables of S are hidden from the user.
-	--In particular, the variables in Q_* are
-	--still recognized as variables of Q and not S, 
-	--and the code will not break if the variables in Q happen to be called
-
-    	QtoS := map(S,Q,drop(S_*,-mu));
-
-	odds := select(toList(min M .. max M), o -> odd(o));
-	evens := select(toList(min M .. max M), o -> even(o));
-	--old code:
---      Qvars := Q_*;
---	S := k(monoid[(Qvars | toList(a_1..a_mu))]);
-
---    	QtoS := map(S,Q,drop(S_*,-mu));
---	T := S/ideal drop(S_*,-mu);
---    	toeven := matrix table(evens, odds, (j,i) -> degreeij(H, {i,j}, QtoS, M.module)) ** T;
---      toodd := matrix table(odds, evens, (j,i) -> degreeij(H, {i,j}, QtoS, M.module)) ** T;
-
-	toeven := matrix table(evens, odds, (j,i) -> degreeij(H, {i,j}, QtoS, M.module));
-	toodd := matrix table(odds, evens, (j,i) -> degreeij(H, {i,j}, QtoS, M.module));
-	T := k(monoid[toList(a_1..a_mu)]);
-	StoT := map(T,S, toList(#Qvars : 0_T) | T_*);
-	toeven = StoT(toeven);
-	toodd = StoT(toodd);
-  
-    	reven := rank target toeven - rank toeven;
-	rodd := rank target toodd - rank toodd;
-
-	toodd = transpose compress transpose compress toodd;
-	toeven = transpose compress transpose compress toeven;
-
-    	return radical intersect(minors(reven, toodd), minors(rodd, toeven))
-
-	);
-
-    if opts.Strategy === RankVarietyFast then (
-	R = ring X;
-	I = ideal R;
-	Q = ring I;
-	k = coefficientRing Q;
-	Pi = resolutionMap(restrict(X,Q));
-	M = source Pi;
-	H = higherHomotopies(flatten entries gens I, Pi,floor((length M + 1)/2));
-
-	mu = numgens I;
-	Qvars = Q_*;
-	a = getSymbol "a";
-	S = k(monoid[(Qvars | toList(a_1..a_mu))]);
-
-	--Produces a polynomial ring with twice as many variables as R.  
-	--The peculiar notation in the previous two lines
-	--is required to ensure that the variables of S are hidden from the user.
-	--In particular, the variables in Q_* are
-	--still recognized as variables of Q and not S, 
-	--and the code will not break if the variables in Q happen to be called
-	--old bad code:
---	a := getSymbol"a";
---	S := Q[a_1 .. a_mu];
-
-    	QtoS = map(S,Q,drop(S_*,-mu));
-
-	odds = select(toList(min M .. max M), o -> odd(o));
-	evens = select(toList(min M .. max M), o -> even(o));
-
-	toeven = matrix table(evens, odds, (j,i) -> degreeij(H, {i,j}, QtoS, M.module));
-	toodd = matrix table(odds, evens, (j,i) -> degreeij(H, {i,j}, QtoS, M.module));
-
-	toeven = matrix table(evens, odds, (j,i) -> degreeij(H, {i,j}, QtoS, M.module));
-	toodd = matrix table(odds, evens, (j,i) -> degreeij(H, {i,j}, QtoS, M.module));
-
-	T = k(monoid[toList(a_1..a_mu)]);
-	StoT = map(T,S, toList(#Qvars : 0_T) | T_*);
-
-	toeven = StoT(toeven);
-	toodd = StoT(toodd);
-	
-    	reven = rank target toeven - rank toeven;
-	rodd = rank target toodd - rank toodd;
-
-	toodd = transpose compress transpose compress toodd;
-	toeven = transpose compress transpose compress toeven;
-
-    	return radical intersect(quickMinors(reven, toodd), quickMinors(rodd, toeven))
-	);
-
+    
+    R := ring X;
     
     if opts.Strategy === Koszul then (
-        R = ring X;
         K := complex(R^1/ideal vars R);
         E := extKoszul(K,X);
-        return radical ann(E)
-    )
+        return radical ann(E);
+    );
+    
+    suppMat := supportMatrices X;
+    toeven := suppMat_0;
+    toodd := suppMat_1;
+    
+    --  I := ideal R;
+    --  Q := ring I;
+    --  k := coefficientRing Q;
+    --  Pi := resolutionMap(restrict(X,Q));
+    --  M := source Pi;
+    --  H := higherHomotopies(flatten entries gens I, Pi,floor((length M + 1)/2));
+    --  mu := numgens I;
+    --  Qvars := Q_*;
+    --  a := getSymbol "a";
+    --  S := k(monoid[(Qvars | toList(a_1..a_mu))]);
+    
+    --Produces a polynomial ring with twice as many variables as R.
+    --The peculiar notation in the previous two lines
+    --is required to ensure that the variables of S are hidden from the user.
+    --In particular, the variables in Q_* are
+    --still recognized as variables of Q and not S,
+    --and the code will not break if the variables in Q happen to be called
+    
+--      QtoS := map(S,Q,drop(S_*,-mu));
+--      
+--      odds := select(toList(min M .. max M), o -> odd(o));
+--      evens := select(toList(min M .. max M), o -> even(o));
+    
+    -- old code:
+    -- Qvars := Q_*;
+    -- S := k(monoid[(Qvars | toList(a_1..a_mu))]);
+    -- QtoS := map(S,Q,drop(S_*,-mu));
+    -- T := S/ideal drop(S_*,-mu);
+    -- toeven := matrix table(evens, odds, (j,i) -> degreeij(H, {i,j}, QtoS, M.module)) ** T;
+    -- toodd := matrix table(odds, evens, (j,i) -> degreeij(H, {i,j}, QtoS, M.module)) ** T;
+    
+    --  toeven := matrix table(evens, odds, (j,i) -> degreeij(H, {i,j}, QtoS, M.module));
+    --  toodd := matrix table(odds, evens, (j,i) -> degreeij(H, {i,j}, QtoS, M.module));
+    --  T := k(monoid[toList(a_1..a_mu)]);
+    --  StoT := map(T,S, toList(#Qvars : 0_T) | T_*);
+    --  toeven = StoT(toeven);
+    --  toodd = StoT(toodd);
+    
+    reven := rank target toeven - rank toeven;
+    rodd := rank target toodd - rank toodd;
+    
+    toodd = transpose compress transpose compress toodd;
+    toeven = transpose compress transpose compress toeven;
+    
+    if opts.Strategy === RankVariety then (
+        return radical intersect(minors(reven, toodd), minors(rodd, toeven))
+    );
+    
+    return radical intersect(quickMinors(reven, toodd), quickMinors(rodd, toeven))
 )
 
 supportVariety(Module) := Ideal => opts -> (M) -> (
@@ -565,8 +521,7 @@ supportVariety(Complex,Complex) := Ideal => opts -> (X,Y) -> (
     if not(ring X == ring Y) then error "expected complexes over the same ring" else radical ann extKoszul(X,Y)
 )
 
-
-
+-- JL: What is this doing?
 supportMatrices = method();
 supportMatrices(Complex) := Ideal => X -> (
     R := ring X;
@@ -595,7 +550,7 @@ supportMatrices(Complex) := Ideal => X -> (
    
     toeven = StoT(toeven);
     toodd = StoT(toodd);
-	
+
     {toeven, toodd}
 )
 
@@ -817,7 +772,10 @@ restrict(ComplexMap,Ring) := ComplexMap => (f,Q) -> (
 )
 
 flattenRingOver = method();
+
 flattenRingOver(Ring,Ring) := Ring => (B,A) -> (
+    -- Express B as A[mons]/I
+    
     -- Create list of all intermediate rings.
     rngs := append(B.baseRings,B);
     i := position(rngs,R -> R === A);
@@ -855,7 +813,7 @@ flattenRingOver(Ring,Ring) := Ring => (B,A) -> (
     f := map((last rngs),Q);
     I := ker f;
     
-    Q/I
+    return Q/I;
 );
 
 ---------------------------------------------------------------
@@ -888,23 +846,35 @@ higherHomotopies(Complex) := X -> (
     I := ideal R;
     Q := ring I;
     Pi := resolutionMap(restrict(X,Q));
-    M := source Pi;
-    higherHomotopies(flatten entries gens I, Pi,floor((length M + 1)/2))
+    F := source Pi;
+    higherHomotopies(flatten entries gens I, Pi,floor((length F + 1)/2))
 )
 
 higherHomotopies(Module) := M -> higherHomotopies(complex(M))
     
 higherHomotopies(List,ComplexMap,ZZ) := (Igens,Pi,D) -> (
+    -- Input: 
+        -- Igens    list of elements that act trivially on target Pi
+        -- Pi       quasi-isomorphism
+        -- D        step to which the higher homotopies are computed
+    -- Returns a hashTable of higher homotopies that 
+    -- 1) witness that multiplication by the entries of Igens on (source Pi) is zero
+    -- 2) that are compatible with Pi
+    
+    -- Check whether the elements of Igens act trivially on (target Pi)
+    if any(Igens, f -> f*Pi != 0) then error "Expected Igens to act trivially on the target of Pi";
+    
     Q := ring Igens_0;
     M := source Pi;
     Y := target Pi;
     K := cone(Pi)[1];
-    conemap := map(M,K,id_M | map(M,Y[1],0));
---    mapfromMtoK := map(K,M, id_M || map(Y[1],M,0));
+    conemap := inducedMap(M,K); -- this is an acyclic complex
+    -- conemap := map(M,K,id_M | map(M,Y[1],0));
+    -- mapfromMtoK := map(K,M, id_M || map(Y[1],M,0));
     N := #Igens;
     
     fmaps := apply(Igens, f -> map(K,M, f*id_M || map(Y[1],M,0)));
-    gennullhoms := apply(fmaps, f -> complex nullhomotopy chainComplex f);
+    gennullhoms := apply(fmaps, f -> nullHomotopy f);
     
     H := new MutableHashTable;--H has maps with target M
     Haux := new MutableHashTable;--Haux has maps with target K
@@ -913,10 +883,10 @@ higherHomotopies(List,ComplexMap,ZZ) := (Igens,Pi,D) -> (
     e := expo(N,1);
     
     scan(flatten table(e,toList(min M .. max M), (a,j) -> {a,j}), 
-	k -> (Haux#k = (gennullhoms_(position(k_0, o -> o==1)))_(k_1)));
+    k -> (Haux#k = (gennullhoms_(position(k_0, o -> o==1)))_(k_1)));
     
     scan(flatten table(e,toList(min M .. max M), (a,j) -> {a,j}), 
-	k -> (H#k = conemap_(k_1+1) * (gennullhoms_(position(k_0, o -> o==1)))_(k_1)));
+    k -> (H#k = conemap_(k_1+1) * (gennullhoms_(position(k_0, o -> o==1)))_(k_1)));
     
     S := new MutableHashTable;
     
@@ -924,18 +894,18 @@ higherHomotopies(List,ComplexMap,ZZ) := (Igens,Pi,D) -> (
     nullhomotopies := {};   
     
     for d from 2 to D do (
-	e = expo(N,d);
-	--S is an auxiliary hashtable
-	S = new MutableHashTable from flatten table(
-	    e, toList(min M .. max M), (w,i) -> ({w,i},map(K_(i+2*d-2),M_i,0))
-	    );
-	
-	scan(keys H ** e, P -> (
-		k := P_0;
-		i := k_1;
-		u := P_1;
-		v := compl(max M,u,k);
-		if v != {} then S#{u,i} = S#{u,i} + (Haux#v * H#k)));
+    e = expo(N,d);
+    --S is an auxiliary hashtable
+    S = new MutableHashTable from flatten table(
+        e, toList(min M .. max M), (w,i) -> ({w,i},map(K_(i+2*d-2),M_i,0))
+        );
+
+    scan(keys H ** e, P -> (
+        k := P_0;
+        i := k_1;
+        u := P_1;
+        v := compl(max M,u,k);
+        if v != {} then S#{u,i} = S#{u,i} + (Haux#v * H#k)));
        
        allmaps = apply(e, w -> (
            maps := apply(toList((min M) .. (max M)), i -> - S#{w,i});
@@ -947,10 +917,10 @@ higherHomotopies(List,ComplexMap,ZZ) := (Igens,Pi,D) -> (
 
        scan( toList(0 .. (#e - 1)) ** toList(min M .. max M - 2*d + 2), W -> (
            j := W_0;
-	   w := e_j;
+       w := e_j;
            i := W_1;
            Haux#{w,i} = (nullhomotopies_j)_i;
-           H#{w,i} = conemap_(i + 2*d - 1) * (nullhomotopies_j)_i	   
+           H#{w,i} = conemap_(i + 2*d - 1) * (nullhomotopies_j)_i
            )
        );
    );--end of for
@@ -1045,7 +1015,7 @@ extKoszul(Complex,Complex) := (M,N) -> (
     );
     
     DeltaCmatrix := sum(apply(select(keys homotopies, i -> homotopies#i != 0), 
-	    i -> prodX(i_0)*toS(makematrix(i,homotopies#i))));
+        i -> prodX(i_0)*toS(makematrix(i,homotopies#i))));
     DeltaC := map( Cstar,
                   Cstar, 
                   transpose DeltaCmatrix,
@@ -1058,14 +1028,14 @@ extKoszul(Complex,Complex) := (M,N) -> (
     Nmatrix := apply(Ndelta, f -> tensor(S,toS,restrict(f,A)));
     Nsize := apply(Nmods,numgens);
     Ntable := table(#degreesN,#degreesN, 
-	(p,q) -> if (p == (q-1)) then Nmatrix_p else map(S^(Nsize_p),S^(Nsize_q),0));
+    (p,q) -> if (p == (q-1)) then Nmatrix_p else map(S^(Nsize_p),S^(Nsize_q),0));
     
     DeltaNmatrix := matrixfromblocks Ntable;
     Ngraded := fold((a,b) -> a ++ b,Nmods);
     DeltaN := map(Ngraded,Ngraded,DeltaNmatrix);
     
     SignIdCstar := diagonalMatrix flatten toList apply(pairs(ranksC), 
-	w -> if even(w_0) then apply(toList(1 .. w_1), o -> -1) else apply(toList(1 .. w_1), o -> 1));
+    w -> if even(w_0) then apply(toList(1 .. w_1), o -> -1) else apply(toList(1 .. w_1), o -> 1));
 
     SignIdCstar = promote(SignIdCstar, S); 
     
@@ -1773,7 +1743,7 @@ doc ///
 doc ///
     Key
         nonProxySmall
-    	(nonProxySmall,Ring)
+        (nonProxySmall,Ring)
         (nonProxySmall,Ideal)
     Headline
         if the given ring is not a ci, constructs a module that is not proxy small
