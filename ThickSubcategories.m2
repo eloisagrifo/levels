@@ -27,6 +27,8 @@ export {
     "ghost",
     "coghost",
     "level",
+    "isCoghost",
+    "isGhost",
     "isPerfect",
     "supportVariety",
     "isBuilt",
@@ -2085,19 +2087,19 @@ TEST ///
     f1 = ghost(G1,X,{0},HomogeneousMaps => true)
     
     assert(not isGhost(G0,f0))
-    assert(isGhost(G0,f0),HomogeneousMaps => true)
-    assert(not isGhost(G0,f1),HomogeneousMaps => true)
-    assert(not isGhost(G1,f0),HomogeneousMaps => true)
-    assert(isGhost(G1,f1),HomogeneousMaps => true)
+    assert(isGhost(G0,f0,HomogeneousMaps => true))
+    assert(not isGhost(G0,f1,HomogeneousMaps => true))
+    assert(not isGhost(G1,f0,HomogeneousMaps => true))
+    assert(isGhost(G1,f1,HomogeneousMaps => true))
     
     g0 = coghost(G0,X,{0},HomogeneousMaps => true)
     g1 = coghost(G1,X,{0},HomogeneousMaps => true)
     
     assert(not isCoghost(G0,g0))
-    assert(isCoghost(G0,g0),HomogeneousMaps => true)
-    assert(not isCoghost(G0,g1),HomogeneousMaps => true)
-    assert(not isCoghost(G1,g0),HomogeneousMaps => true)
-    assert(isCoghost(G1,g1),HomogeneousMaps => true)
+    assert(isCoghost(G0,g0,HomogeneousMaps => true))
+    assert(not isCoghost(G0,g1,HomogeneousMaps => true))
+    assert(not isCoghost(G1,g0,HomogeneousMaps => true))
+    assert(isCoghost(G1,g1,HomogeneousMaps => true))
 ///
 
 end
