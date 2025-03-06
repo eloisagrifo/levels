@@ -1,0 +1,21 @@
+In rightApproximation:
+-- FIXME: Use DegreeLimit in Hom to only compute degree 0 parts (DegreeLimit is newish)
+
+
+
+
+E:
+
+--explain what mapwithvars and degreeij do
+--double check that the code killed in supportVarieties (from supportMatrices) can die
+And check exts
+
+--add documentation + comments to supportMatrices
+
+isBuilt: change how supports are computed to use supportVariety
+
+
+Push forward switch everywhere and kill our restrict
+
+
+Does extKoszul actually work?
