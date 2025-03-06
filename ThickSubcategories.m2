@@ -5,7 +5,7 @@ newPackage(
     Authors => {
         {Name => "Eloisa Grifo", Email => "eloisa.grifo@unl.edu", HomePage => "https://eloisagrifo.github.io"},
         {Name => "Janina C. Letz", Email => "jletz@math.uni-bielefeld.de", HomePage => "http://www.math.uni-bielefeld.de/~jletz"},
-        {Name => "Josh Pollitz", Email => "pollitz@math.utah.edu", HomePage => "http://www.math.utah.edu/~pollitz"}
+        {Name => "Josh Pollitz", Email => "jhpollit@syr.edu", HomePage => "https://www.joshpollitz.com"}
     },
     Headline => "Computing levels of complexes and support varieties of complexes",
     DebuggingMode => true
@@ -249,7 +249,6 @@ level(Complex,Complex,List) := ZZ => opts -> (G,X,L) -> (
     homogeneous := isHomogeneous X;
     if (opts.Strategy == "coghost") then ( -- Coghost maps
         -- As long as the composition of the ghost maps g is non-zero, continue
-        -- FIXME: this returns the wrong answer
         while ((not isNullHomotopic g) and (n < opts.MaxLevelAttempts)) do (
             rX = f.source;
             f = coghost(rG,rX,L, HomogeneousMaps => opts.HomogeneousMaps);
@@ -347,8 +346,134 @@ isPerfect(Module) := Boolean => (M) -> (
     isPerfect(complex(M))
 )
 
+
+
+
+
+
+
 ---------------------------------------------------------------
--- Compute the support variety of a complex
+-- auxiliary functions for homotopies
+--------------------------------------------------------------
+
+
+--given a key and a degree d
+--constructs the key for the codomain of a map of degree d starting at the given key
+compl = method()
+compl(ZZ,List,List) := (MaxSize,u,L) -> (
+    i := L_1;
+    multideg := L_0; 
+    l := u - multideg; -- new multideg
+   
+    test := ((i + 2*sum(multideg) - 1) > MaxSize) or (i + 2*sum(u) - 1) > MaxSize or any(l, o -> o<0) or sum(l)==0;
+    
+    if test then {} else {l,i + 2*sum(multideg) - 1}
+    )
+
+
+---------------------------------------------------------------
+-- system of higher homotopies
+---------------------------------------------------------------
+
+higherHomotopies = method()
+
+higherHomotopies(Complex) := X -> (
+    R := ring X;
+    I := ideal R;
+    Q := ring I;
+    Pi := resolutionMap(restrict(X,Q));
+    F := source Pi;
+    higherHomotopies(flatten entries gens I, Pi,floor((length F + 1)/2))
+)
+
+higherHomotopies(Module) := M -> higherHomotopies(complex(M))
+    
+higherHomotopies(List,ComplexMap,ZZ) := (Igens,Pi,D) -> (
+    -- Input: 
+        -- Igens    list of elements that act trivially on target Pi
+        -- Pi       quasi-isomorphism
+        -- D        step to which the higher homotopies are computed
+    -- Returns a hashTable of higher homotopies that 
+    -- 1) witness that multiplication by the entries of Igens on (source Pi) is zero
+    -- 2) that are compatible with Pi
+    
+    -- Check whether the elements of Igens act trivially on (target Pi)
+    if any(Igens, f -> f*Pi != 0) then error "Expected Igens to act trivially on the target of Pi";
+    
+    Q := ring Igens_0;
+    M := source Pi;
+    Y := target Pi;
+    K := cone(Pi)[1];
+    conemap := inducedMap(M,K); -- this is an acyclic complex
+    -- conemap := map(M,K,id_M | map(M,Y[1],0));
+    -- mapfromMtoK := map(K,M, id_M || map(Y[1],M,0));
+    N := #Igens;
+    
+    fmaps := apply(Igens, f -> map(K,M, f*id_M || map(Y[1],M,0)));
+    gennullhoms := apply(fmaps, f -> nullHomotopy f);
+    
+    H := new MutableHashTable;--H has maps with target M
+    Haux := new MutableHashTable;--Haux has maps with target K
+    
+    --setting up homotopies of degree 1 
+    e := expo(N,1);
+    
+    scan(flatten table(e,toList(min M .. max M), (a,j) -> {a,j}), 
+    k -> (Haux#k = (gennullhoms_(position(k_0, o -> o==1)))_(k_1)));
+    
+    scan(flatten table(e,toList(min M .. max M), (a,j) -> {a,j}), 
+    k -> (H#k = conemap_(k_1+1) * (gennullhoms_(position(k_0, o -> o==1)))_(k_1)));
+    
+    S := new MutableHashTable;
+    
+    allmaps := {};
+    nullhomotopies := {};   
+    
+    for d from 2 to D do (
+    e = expo(N,d);
+    --S is an auxiliary hashtable
+    S = new MutableHashTable from flatten table(
+        e, toList(min M .. max M), (w,i) -> ({w,i},map(K_(i+2*d-2),M_i,0))
+        );
+
+    scan(keys H ** e, P -> (
+        k := P_0;
+        i := k_1;
+        u := P_1;
+        v := compl(max M,u,k);
+        if v != {} then S#{u,i} = S#{u,i} + (Haux#v * H#k)));
+       
+       allmaps = apply(e, w -> (
+           maps := apply(toList((min M) .. (max M)), i -> - S#{w,i});
+           map(K[2*d-2], M, maps)
+           )
+       );  
+ 
+       nullhomotopies = apply(allmaps, o -> complex nullhomotopy chainComplex o);
+
+       scan( toList(0 .. (#e - 1)) ** toList(min M .. max M - 2*d + 2), W -> (
+           j := W_0;
+       w := e_j;
+           i := W_1;
+           Haux#{w,i} = (nullhomotopies_j)_i;
+           H#{w,i} = conemap_(i + 2*d - 1) * (nullhomotopies_j)_i
+           )
+       );
+   );--end of for
+        
+    e = (expo(N,0))_0;--making degree 0 stuff
+    scan(toList((min M + 1) .. max M), i -> H#{e,i} = M.dd_i);
+--    scan(toList((min M + 1) .. max M), i -> Haux#{e,i} = mapfromMtoK_(i-1) * M.dd_i);
+    
+    hashTable pairs H
+);
+
+
+
+
+
+---------------------------------------------------------------
+-- Auxiliary: computing minors (might be moved to FastMinors package)
 ---------------------------------------------------------------
 
 -- minors
@@ -396,7 +521,18 @@ quickMinors(ZZ,Matrix) := Ideal => opts -> (n,M) -> (
 --)
 
 
+
+
+---------------------------------------------------------------
+-- Compute the support variety of a complex
+---------------------------------------------------------------
+
+
+---------------------------------------------------------------
 -- auxiliary functions
+---------------------------------------------------------------
+
+
 -- JL: What does this function do?
 mapwithvars = method()
 
@@ -432,8 +568,7 @@ degreeij(HashTable,List,RingMap,HashTable) := Matrix => (L,degs,QtoS,ranks) -> (
    )
 )
 
---what is this supposed to be?!
--- JL: No idea, you wrote it.
+
 exts = method( );
 
 exts(Module) := List => Y -> (
@@ -455,10 +590,11 @@ exts(Module) := List => Y -> (
     --In particular, the variables in Q_* are
     --still recognized as variables of Q and not S,
     --and the code will not break if the variables in Q happen to be called
+
     --old bad code:
 --    a := getSymbol"a";
 --    S := Q[a_1 .. a_mu];
-        QtoS := map(S,Q,drop(S_*,-mu));
+    QtoS := map(S,Q,drop(S_*,-mu));
     T := S/ideal drop(S_*,-mu);
     odds := select(toList(min M .. max M), o -> odd(o));
     evens := select(toList(min M .. max M), o -> even(o));
@@ -469,6 +605,11 @@ exts(Module) := List => Y -> (
 
 
 
+
+
+---------------------------------------------------------------
+-- Cohomological support variety of a complex
+---------------------------------------------------------------
 
 
 --support variety
@@ -529,14 +670,19 @@ supportVariety(Complex) := Ideal => opts -> (X) -> (
     
     reven := rank target toeven - rank toeven;
     rodd := rank target toodd - rank toodd;
-    
+
+    --kill all rows and columns of zeroes
+    --will want to compute only the ideal of minors of a certain size
     toodd = transpose compress transpose compress toodd;
     toeven = transpose compress transpose compress toeven;
     
     if opts.Strategy === RankVariety then (
         return radical intersect(minors(reven, toodd), minors(rodd, toeven))
     );
-    
+
+
+-- strategy RankVarietyFast:
+
     return radical intersect(quickMinors(reven, toodd), quickMinors(rodd, toeven))
 )
 
@@ -548,7 +694,7 @@ supportVariety(Complex,Complex) := Ideal => opts -> (X,Y) -> (
     if not(ring X == ring Y) then error "expected complexes over the same ring" else radical ann extKoszul(X,Y)
 )
 
--- JL: What is this doing?
+
 supportMatrices = method();
 supportMatrices(Complex) := Ideal => X -> (
     R := ring X;
@@ -582,6 +728,7 @@ supportMatrices(Complex) := Ideal => X -> (
 )
 
 supportMatrices(Module) := Ideal => X -> (supportMatrices(complex(X)))
+
 
 ---------------------------------------------------------------
 -- Check if X is built by G
@@ -645,6 +792,7 @@ isBuilt(Complex,Module) := Boolean => opts -> (X,N) -> (
 isBuilt(Module,Complex) := Boolean =>  opts -> (M,G) -> (
     isBuilt(complex M,G, FiniteLength => opts.FiniteLength)
 )
+
 
 ---------------------------------------------------------------
 -- Rectriction of scalars of modules, complexes, maps
@@ -798,6 +946,8 @@ restrict(ComplexMap,Ring) := ComplexMap => (f,Q) -> (
     map(rY,rX,hashTable apply(toList(lo..hi),i -> {i,restrict(f_i,Q)}))
 )
 
+
+--this is used in restrict and might be able to die
 flattenRingOver = method();
 
 flattenRingOver(Ring,Ring) := Ring => (B,A) -> (
@@ -841,122 +991,6 @@ flattenRingOver(Ring,Ring) := Ring => (B,A) -> (
     I := ker f;
     
     return Q/I;
-);
-
----------------------------------------------------------------
--- auxiliary functions for homotopies
---------------------------------------------------------------
-
-
---given a key and a degree d
---constructs the key for the codomain of a map of degree d starting at the given key
-compl = method()
-compl(ZZ,List,List) := (MaxSize,u,L) -> (
-    i := L_1;
-    multideg := L_0; 
-    l := u - multideg; -- new multideg
-   
-    test := ((i + 2*sum(multideg) - 1) > MaxSize) or (i + 2*sum(u) - 1) > MaxSize or any(l, o -> o<0) or sum(l)==0;
-    
-    if test then {} else {l,i + 2*sum(multideg) - 1}
-    )
-
-
----------------------------------------------------------------
--- system of higher homotopies
----------------------------------------------------------------
-
-higherHomotopies = method()
-
-higherHomotopies(Complex) := X -> (
-    R := ring X;
-    I := ideal R;
-    Q := ring I;
-    Pi := resolutionMap(restrict(X,Q));
-    F := source Pi;
-    higherHomotopies(flatten entries gens I, Pi,floor((length F + 1)/2))
-)
-
-higherHomotopies(Module) := M -> higherHomotopies(complex(M))
-    
-higherHomotopies(List,ComplexMap,ZZ) := (Igens,Pi,D) -> (
-    -- Input: 
-        -- Igens    list of elements that act trivially on target Pi
-        -- Pi       quasi-isomorphism
-        -- D        step to which the higher homotopies are computed
-    -- Returns a hashTable of higher homotopies that 
-    -- 1) witness that multiplication by the entries of Igens on (source Pi) is zero
-    -- 2) that are compatible with Pi
-    
-    -- Check whether the elements of Igens act trivially on (target Pi)
-    if any(Igens, f -> f*Pi != 0) then error "Expected Igens to act trivially on the target of Pi";
-    
-    Q := ring Igens_0;
-    M := source Pi;
-    Y := target Pi;
-    K := cone(Pi)[1];
-    conemap := inducedMap(M,K); -- this is an acyclic complex
-    -- conemap := map(M,K,id_M | map(M,Y[1],0));
-    -- mapfromMtoK := map(K,M, id_M || map(Y[1],M,0));
-    N := #Igens;
-    
-    fmaps := apply(Igens, f -> map(K,M, f*id_M || map(Y[1],M,0)));
-    gennullhoms := apply(fmaps, f -> nullHomotopy f);
-    
-    H := new MutableHashTable;--H has maps with target M
-    Haux := new MutableHashTable;--Haux has maps with target K
-    
-    --setting up homotopies of degree 1 
-    e := expo(N,1);
-    
-    scan(flatten table(e,toList(min M .. max M), (a,j) -> {a,j}), 
-    k -> (Haux#k = (gennullhoms_(position(k_0, o -> o==1)))_(k_1)));
-    
-    scan(flatten table(e,toList(min M .. max M), (a,j) -> {a,j}), 
-    k -> (H#k = conemap_(k_1+1) * (gennullhoms_(position(k_0, o -> o==1)))_(k_1)));
-    
-    S := new MutableHashTable;
-    
-    allmaps := {};
-    nullhomotopies := {};   
-    
-    for d from 2 to D do (
-    e = expo(N,d);
-    --S is an auxiliary hashtable
-    S = new MutableHashTable from flatten table(
-        e, toList(min M .. max M), (w,i) -> ({w,i},map(K_(i+2*d-2),M_i,0))
-        );
-
-    scan(keys H ** e, P -> (
-        k := P_0;
-        i := k_1;
-        u := P_1;
-        v := compl(max M,u,k);
-        if v != {} then S#{u,i} = S#{u,i} + (Haux#v * H#k)));
-       
-       allmaps = apply(e, w -> (
-           maps := apply(toList((min M) .. (max M)), i -> - S#{w,i});
-           map(K[2*d-2], M, maps)
-           )
-       );  
- 
-       nullhomotopies = apply(allmaps, o -> complex nullhomotopy chainComplex o);
-
-       scan( toList(0 .. (#e - 1)) ** toList(min M .. max M - 2*d + 2), W -> (
-           j := W_0;
-       w := e_j;
-           i := W_1;
-           Haux#{w,i} = (nullhomotopies_j)_i;
-           H#{w,i} = conemap_(i + 2*d - 1) * (nullhomotopies_j)_i
-           )
-       );
-   );--end of for
-        
-    e = (expo(N,0))_0;--making degree 0 stuff
-    scan(toList((min M + 1) .. max M), i -> H#{e,i} = M.dd_i);
---    scan(toList((min M + 1) .. max M), i -> Haux#{e,i} = mapfromMtoK_(i-1) * M.dd_i);
-    
-    hashTable pairs H
 );
 
 
@@ -1077,12 +1111,12 @@ extKoszul(Complex,Complex) := (M,N) -> (
 ---------------------------------------------------------------
 --not exported, auxiliary function to build non-proxy small modules
 findgs = method( TypicalValue => Ideal );
+--given element f, extends f to a maximal regular sequence
+--note this is only called when Q is a polynomial ring
 findgs(RingElement) := Ideal => f -> (
-    Q := ring f;
-    R := Q/ideal(f);
-    m := ideal vars R;
-    ideal append({f},lift(inhomogeneousSystemOfParameters(m,R),Q))
+    findgs({f})
 )
+--given generators for an ideal I, finds a ci ideal J containing I
 findgs(List) := Ideal => L -> (
     Q := ring L_0;
     R := Q/ideal(L);
@@ -1091,6 +1125,7 @@ findgs(List) := Ideal => L -> (
 )
 
 --not exported, auxiliary function to build non-proxy small modules
+--given ideals I contained in J, computes the induced map I/mI -> J/mJ 
 makemap = method();
 makemap(Ideal,Ideal) := Matrix => (I,J) -> (
     Q := ring I;
@@ -1100,9 +1135,13 @@ makemap(Ideal,Ideal) := Matrix => (I,J) -> (
     matrix apply(entries A, i -> apply(i,j -> lift(j,k)))
 )
 
+
+--given an ideal I in Q (a polynomial ring)
+--constructs an ideal J such that Q/J is not proxy small over Q/I
+--only guaranteed to work if I is equigenerated
 nonProxySmall = method();
 nonProxySmall(Ideal) := Ideal => I -> (
-    listf := flatten entries gens I;
+    listf := sort flatten entries gens I;
     if isRegularSequence listf then error "all modules over a ci are proxy small";
     Q := ring I;
     f := first listf;
@@ -1123,6 +1162,8 @@ nonProxySmall(Ideal) := Ideal => I -> (
     w := select(1,G, o -> (N = (Q^1/o)**(Q/I); not isBuilt(M,N)));
     if w == {} then error "none found" else return w_0
 )
+
+--returns a cyclic R-module that is not proxy small
 nonProxySmall(Ring) := Module => R -> (
     I := ideal R;
     Q := ambient R;
