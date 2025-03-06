@@ -357,17 +357,44 @@ quickMinors = method( TypicalValue => Ideal,
                                    Attempts => 5} )
 
 quickMinors(ZZ,Matrix) := Ideal => opts -> (n,M) -> (
-    
-    J := ideal(0_(ring M));
-    if M == 0 then return J;
-    
+
+    if M == 0 then return ideal(0_(ring M));
+
+    numberMinors := opts.NumberOfMinors;
+    numberAttempts := opts.Attempts;
+	
+    if numberMinors == 1 and numberAttempts == 1 then (
+	numberMinors = dim ring M;
+	numberAttempts = numberMinors
+	);
+
+
+    J := chooseGoodMinors(numberMinors, n, M, Strategy => StrategyDefaultNonRandom);
+    s := 0;
+     
+     for i from 1 to numberAttempts do (
+	 s = try det ((findANonZeroMinor(n,M,J,Verbose=>true))#3) else 0;
+	 if not (s==0) then J = radical(J + ideal(s));
+	 i = i+1
+--	 J = J + chooseGoodMinors(numberMinors, n, M, Strategy => StrategyDefaultNonRandom);
+	 );
+
+     J
+     )
+			   
+--quickMinors(ZZ,Matrix) := Ideal => opts -> (n,M) -> (
+--     
+--    J := ideal(0_(ring M));
+--    if M == 0 then return J;
+--
     -- JL: Why call the same function multiple times? Is this given something different than just directly taking more minors?
-    for i from 1 to opts.Attempts do (
-        J = J + chooseGoodMinors(opts.NumberOfMinors, n, M, Strategy => StrategyDefaultNonRandom);
-    );
-    
-    return J;
-)
+--    for i from 1 to opts.Attempts do (
+--        J = J + chooseGoodMinors(opts.NumberOfMinors, n, M, Strategy => StrategyDefaultNonRandom);
+--    );
+--    
+--    return J;
+--)
+
 
 -- auxiliary functions
 -- JL: What does this function do?
