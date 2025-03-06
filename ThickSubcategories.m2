@@ -195,6 +195,39 @@ ghost(Complex) := ComplexMap => opts -> (X) -> (
 )
 
 ---------------------------------------------------------------
+-- Check whether a map is ghost
+---------------------------------------------------------------
+isGhost = method( TypicalValue => Boolean,
+                  Options => { HomogeneousMaps => false });
+
+-- Checks whether f is G-ghost in the derived category
+isGhost(Complex,ComplexMap) := Boolean => opts -> (G,f) -> (
+    -- Input: G needs to be a complex of projective or free modules
+    if opts.HomogeneousMaps then (
+        return (basis(0,HH_0 Hom(G,f)) == 0);
+    ) else (
+        return (HH_0 Hom(G,f) == 0);
+    );
+)
+
+isGhost(Complex,ComplexMap,List) := Boolean => opts -> (G,f,L) -> (
+    return fold(apply(L,n -> isGhost(G[-n],f, HomogeneousMaps => opts.HomogeneousMaps)),true,(a,b) -> a and b);
+)
+
+--  Checks whether f is R-ghost in the derived category
+isGhost(ComplexMap) := Boolean => opts -> (f) -> (
+    if opts.HomogeneousMaps then (
+        return (basis(0,HH_0 f) == 0);
+    ) else (
+        return (HH_0 f == 0);
+    );
+)
+
+isGhost(ComplexMap,List) := Boolean => opts -> (f,L) -> (
+    return fold(apply(L,n -> isGhost(f[n], HomogeneousMaps => opts.HomogeneousMaps)),true,(a,b) -> a and b);
+)
+
+---------------------------------------------------------------
 -- Create the G-coghost map associated to the left G-approximation
 ---------------------------------------------------------------
 coghost = method( TypicalValue => ComplexMap,
@@ -220,6 +253,35 @@ coghost(Complex,List) := ComplexMap => opts -> (X,L) -> (
 
 coghost(Complex) := ComplexMap => opts -> (X) -> (
     return coghost(X,{0}, HomogeneousMaps => opts.HomogeneousMaps)
+)
+
+---------------------------------------------------------------
+-- Check whether a map is coghost
+---------------------------------------------------------------
+isCoghost = method( TypicalValue => Boolean,
+                  Options => { HomogeneousMaps => false });
+
+-- Checks whether f is G-coghost in the derived category
+isCoghost(Complex,ComplexMap) := Boolean => opts -> (G,f) -> (
+    -- Input: the source of f needs to be a complex of projective or free modules
+    if opts.HomogeneousMaps then (
+        return (basis(0,HH_0 Hom(f,G)) == 0);
+    ) else (
+        return (HH_0 Hom(f,G) == 0);
+    );
+)
+
+isCoghost(Complex,ComplexMap,List) := Boolean => opts -> (G,f,L) -> (
+    return fold(apply(L,n -> isCoghost(G[-n],f, HomogeneousMaps => opts.HomogeneousMaps)),true,(a,b) -> a and b);
+)
+
+--  Checks whether f is R-ghost in the derived category
+isCoghost(ComplexMap) := Boolean => opts -> (f) -> (
+    return isCoghost(complex((ring f)^1),f, HomogeneousMaps => opts.HomogeneousMaps);
+)
+
+isCoghost(ComplexMap,List) := Boolean => opts -> (f,L) -> (
+    return isCoghost(complex((ring f)^1),f,L, HomogeneousMaps => opts.HomogeneousMaps);
 )
 
 ---------------------------------------------------------------
@@ -1287,10 +1349,10 @@ doc ///
         L:List
     Outputs
         :ComplexMap
-            a map with source $X$ that is ghost with respect to $G$
+            a map with source $X$ that is ghost with respect to $G$ in the derived category
     Description
         Text
-            A map $X \to Y$ is ghost with respect to $G$ if any composition $G \to X \to Y$ is zero. 
+            A map $X \to Y$ is ghost with respect to $G$ if any composition $G \to X \to Y$ is zero in the derived category. 
         Example
             needsPackage "Complexes";
             R = QQ[x]
@@ -1328,15 +1390,44 @@ doc ///
             HH_2 f == 0
     Caveat
         This method only works if $G$ is a complex of free modules. 
+    SeeAlso
+        isGhost
+///
+
+doc ///
+    Key
+        isGhost
+        (isGhost, Complex, ComplexMap)
+        (isGhost, Complex, ComplexMap, List)
+        (isGhost, ComplexMap)
+        (isGhost, ComplexMap, List)
+    Headline
+        check whether a chain map is ghost
+    Usage
+        isGhost(G,f)
+        isGhost(G,f,L)
+        isGhost f
+        isGhost(f,L)
+    Inputs
+        G:Complex
+        f:ComplexMap
+        L:List
+    Outputs
+        :Boolean
+            true when f is a G-ghost map in the derived category
+    Caveat
+        This method only works if $G$ is a complex of free modules. 
+    SeeAlso
+        ghost
 ///
 
 doc ///
     Key
         coghost
         (coghost, Complex, Complex)
-        (coghost, Complex, Complex,List)
+        (coghost, Complex, Complex, List)
         (coghost, Complex)
-        (coghost, Complex,List)
+        (coghost, Complex, List)
     Headline
         constructs a coghost map
     Usage
@@ -1350,10 +1441,10 @@ doc ///
         L:List
     Outputs
         :ComplexMap
-            a map with target $X$ that is coghost with respect to $G$
+            a map with target $X$ that is coghost with respect to $G$ in the derived category
     Description
         Text
-            A map $W \to X$ is coghost with respect to $G$ if any composition $W \to X \to G$ is zero. 
+            A map $W \to X$ is coghost with respect to $G$ if any composition $W \to X \to G$ is zero in the derived category. 
         Example
             needsPackage "Complexes";
             R = QQ[x]
@@ -1380,7 +1471,36 @@ doc ///
             f = coghost(X)
             (prune HH_0 Hom(f,complex R^1)) == 0
     Caveat
-        This method only works if $X$ is a complex of free modules. 
+        This method only works if $X$ is a complex of free modules.
+    SeeAlso
+        isCoghost
+///
+
+doc ///
+    Key
+        isCoghost
+        (isCoghost, Complex, ComplexMap)
+        (isCoghost, Complex, ComplexMap, List)
+        (isCoghost, ComplexMap)
+        (isCoghost, ComplexMap, List)
+    Headline
+        check whether a chain map is coghost
+    Usage
+        isCoghost(G,f)
+        isCoghost(G,f,L)
+        isCoghost f
+        isCoghost(f,L)
+    Inputs
+        G:Complex
+        f:ComplexMap
+        L:List
+    Outputs
+        :Boolean
+            true when f is a G-coghost map in the derived category
+    Caveat
+        This method only works if the target of $f$ is a complex of free modules.
+    SeeAlso
+        coghost
 ///
 
 doc ///
@@ -1951,6 +2071,33 @@ TEST ///
     G2 = complex directSum({R^{0},R^{-1},R^{-2}})
     assert(level(G2,Y,{0,1,2},HomogeneousMaps => true) == 3)
     assert(level(G2,Y,{0,1,2},Strategy => "coghost",HomogeneousMaps => true) == 3)
+///
+
+TEST ///
+    needsPackage "Complexes"
+    
+    R = QQ[x,y];
+    X = complex(R^{0,1})
+    G0 = complex(R^{0})
+    G1 = complex(R^{1})
+    
+    f0 = ghost(G0,X,{0},HomogeneousMaps => true)
+    f1 = ghost(G1,X,{0},HomogeneousMaps => true)
+    
+    assert(not isGhost(G0,f0))
+    assert(isGhost(G0,f0),HomogeneousMaps => true)
+    assert(not isGhost(G0,f1),HomogeneousMaps => true)
+    assert(not isGhost(G1,f0),HomogeneousMaps => true)
+    assert(isGhost(G1,f1),HomogeneousMaps => true)
+    
+    g0 = coghost(G0,X,{0},HomogeneousMaps => true)
+    g1 = coghost(G1,X,{0},HomogeneousMaps => true)
+    
+    assert(not isCoghost(G0,g0))
+    assert(isCoghost(G0,g0),HomogeneousMaps => true)
+    assert(not isCoghost(G0,g1),HomogeneousMaps => true)
+    assert(not isCoghost(G1,g0),HomogeneousMaps => true)
+    assert(isCoghost(G1,g1),HomogeneousMaps => true)
 ///
 
 end
