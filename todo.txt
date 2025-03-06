@@ -1,8 +1,3 @@
-In rightApproximation:
--- FIXME: Use DegreeLimit in Hom to only compute degree 0 parts (DegreeLimit is newish)
-
-
-
 
 E:
 

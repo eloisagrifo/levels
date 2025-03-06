@@ -77,7 +77,6 @@ rightApproximation(Complex,Complex) := ComplexMap => opts -> (G,X) -> (
     local h;
     local Q;
     if opts.HomogeneousMaps then (
-        -- FIXME: Use DegreeLimit in Hom to only compute degree 0 parts (DegreeLimit is newish)
         h = inducedMap(H_0,K) * (basis(0,L) // inducedMap(L,K));
         Q = source h;
     ) else (
