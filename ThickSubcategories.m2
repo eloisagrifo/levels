@@ -561,7 +561,7 @@ quickMinors(ZZ,Matrix) := Ideal => opts -> (n,M) -> (
     s := 0;
      
      for i from 1 to numberAttempts do (
-	 s = try det ((findANonZeroMinor(n,M,J,Verbose=>true))#3) else 0;
+	 s = try det ((findANonZeroMinor(n,M,J,Verbose=>false))#3) else 0;
 	 if not (s==0) then J = radical(J + ideal(s));
 	 i = i+1
 --	 J = J + chooseGoodMinors(numberMinors, n, M, Strategy => StrategyDefaultNonRandom);
