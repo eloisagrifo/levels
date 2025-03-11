@@ -1148,8 +1148,12 @@ extKoszul(Complex,Complex) := (M,N) -> (
     -- Rewrite N as a graded S-module D with a degree -1 map
     degreesN := toList((min N) .. (max N));
     Ndelta := apply(drop(degreesN,1), i -> N.dd_i);
-    Nmods := apply(degreesN, i -> tensor(S,toS,restrict(N_i,A))); -- take them from Nmatrix? Might be faster when N a complex
-    Nmatrix := apply(Ndelta, f -> tensor(S,toS,restrict(f,A)));
+    --in the next two lines, something is off about how tensor works
+    --changed the code appropriately so that it works
+--    Nmods := apply(degreesN, i -> tensor(S,toS,restrict(N_i,A)));
+    Nmods := apply(degreesN, i -> tensor(toS,restrict(N_i,A)));
+    -- take them from Nmatrix? Might be faster when N a complex
+    Nmatrix := apply(Ndelta, f -> tensor(toS,restrict(f,A)));
     Nsize := apply(Nmods,numgens);
     Ntable := table(#degreesN,#degreesN, 
     (p,q) -> if (p == (q-1)) then Nmatrix_p else map(S^(Nsize_p),S^(Nsize_q),0));
