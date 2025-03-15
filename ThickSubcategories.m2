@@ -1065,9 +1065,28 @@ extKoszul = method( TypicalValue => Module );
     
 --Options => { ResidueField => false }
 
+-- extKoszul: computes the module Ext_E(M,N) over S
+-- where E = koszul complex on f = f_1, ..., f_c in Q (assumed to be regular)
+-- R = Q/(f)
+-- M, N are R-complexes
+-- and S = Q[X_1, ... X_c]
+-- note that the sequence f is NOT assumed to be a regular sequence
+
 extKoszul(Module,Module) := (M,N) -> extKoszul(complex(M), complex(N));
-    
+
 extKoszul(Complex,Complex) := (M,N) -> (
+    B := ring M;
+    p := presentation B;
+    A := ring p;
+    I := trim ideal p;
+    n := numgens A;
+    c := numgens I;
+    f := apply(c, i -> I_i);
+
+    extKoszul(M,N,f)
+)
+
+extKoszul(Complex, Complex, List) := (M, N, f) -> (
     B := ring M;
     if not(B === ring(N)) then error "expected complexes over the same ring";
     if not isCommutative B
@@ -1076,13 +1095,17 @@ extKoszul(Complex,Complex) := (M,N) -> (
     then error "'Ext' received modules over an inhomogeneous ring";
     if ((not isHomogeneous M) or (not isHomogeneous N))
     then error "received an inhomogeneous complex";
+
+-- old code
+--    I := trim ideal p;
+--    c := numgens I;
+--    f := apply(c, i -> I_i);
     
     p := presentation B;
     A := ring p;
-    I := trim ideal p;
     n := numgens A;
-    c := numgens I;
-    f := apply(c, i -> I_i);
+    c := length f;
+    I := ideal f;
     
     -- Construct ring of cohomological operators (over field)
     K := coefficientRing A;
@@ -1171,6 +1194,8 @@ extKoszul(Complex,Complex) := (M,N) -> (
 
     prune homology(DeltaBar, DeltaBar)
 )
+
+
 
 
 ---------------------------------------------------------------
