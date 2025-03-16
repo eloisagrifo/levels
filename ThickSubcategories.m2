@@ -17,9 +17,9 @@ export {
     "LengthLimitGenerator",
     "FiniteLength",
     "HomogeneousMaps",
-    "ResidueField",
     "RankVariety",
     "RankVarietyFast",
+    "ResidueField",
     "Koszul",
     "NumberOfMinors",
     "Attempts",
@@ -1061,9 +1061,7 @@ flattenRingOver(Ring,Ring) := Ring => (B,A) -> (
 ---------------------------------------------------------------
 -- complete ext over non-ci
 ---------------------------------------------------------------
-extKoszul = method( TypicalValue => Module );
-    
---Options => { ResidueField => false }
+extKoszul = method( TypicalValue => Module, Options => { ResidueField => false } );
 
 -- extKoszul: computes the module Ext_E(M,N) over S
 -- where E = koszul complex on f = f_1, ..., f_c in Q (assumed to be regular)
@@ -1072,11 +1070,11 @@ extKoszul = method( TypicalValue => Module );
 -- and S = Q[X_1, ... X_c]
 -- note that the sequence f is NOT assumed to be a regular sequence
 
-extKoszul(Module, Module) := (M,N) -> extKoszul(complex(M), complex(N));
+extKoszul(Module, Module) := Module => opts -> (M,N) -> extKoszul(complex(M), complex(N), opts);
+    
+extKoszul(Module, Module, List) := Module => opts -> (M,N,f) -> extKoszul(complex(M), complex(N), f, opts);
 
-extKoszul(Module, Module, List) := (M,N,f) -> extKoszul(complex(M), complex(N), f);
-
-extKoszul(Complex,Complex) := (M,N) -> (
+extKoszul(Complex,Complex) := Module => opts -> (M,N) -> (
     B := ring M;
     p := presentation B;
     A := ring p;
@@ -1088,7 +1086,8 @@ extKoszul(Complex,Complex) := (M,N) -> (
     extKoszul(M,N,f)
 )
 
-extKoszul(Complex, Complex, List) := (M, N, f) -> (
+extKoszul(Complex, Complex, List) := Module => opts -> (M, N, f) -> (
+
     B := ring M;
     if not(B === ring(N)) then error "expected complexes over the same ring";
     if not isCommutative B
@@ -1194,7 +1193,16 @@ extKoszul(Complex, Complex, List) := (M, N, f) -> (
     
     DeltaBar := SignIdCstar ** DeltaN + DeltaC ** id_Ngraded;
 
-    prune homology(DeltaBar, DeltaBar)
+    E := prune homology(DeltaBar, DeltaBar);
+
+    T := K(monoid[X_1 .. X_c,
+           Degrees => { apply(0 .. c-1, i -> prepend(-2, - degree f_i))},
+           Heft => {-2,1} ]);
+    
+    toK := map(T, S, flatten entries vars T | toList(n : 0_T));
+
+    if opts.ResidueField then tensor(toK,E) else E
+    
 )
 
 
