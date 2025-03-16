@@ -1072,7 +1072,9 @@ extKoszul = method( TypicalValue => Module );
 -- and S = Q[X_1, ... X_c]
 -- note that the sequence f is NOT assumed to be a regular sequence
 
-extKoszul(Module,Module) := (M,N) -> extKoszul(complex(M), complex(N));
+extKoszul(Module, Module) := (M,N) -> extKoszul(complex(M), complex(N));
+
+extKoszul(Module, Module, List) := (M,N,f) -> extKoszul(complex(M), complex(N), f);
 
 extKoszul(Complex,Complex) := (M,N) -> (
     B := ring M;
