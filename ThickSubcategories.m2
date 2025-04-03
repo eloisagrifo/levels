@@ -60,7 +60,8 @@ needsPackage "FastMinors"
 -- Construct a right G-approximation
 ---------------------------------------------------------------
 rightApproximation = method( TypicalValue => ComplexMap,
-                             Options => { HomogeneousMaps => false } );
+                             Options => { HomogeneousMaps => false,
+                                          Strategy => "Direct" } );
 
 rightApproximation(Complex,Complex) := ComplexMap => opts -> (G,X) -> (
     -- Input: G needs to be a complex of projective or free modules
@@ -73,9 +74,29 @@ rightApproximation(Complex,Complex) := ComplexMap => opts -> (G,X) -> (
     H := Hom(G,X);
     -- FIXME: We only need H in degrees [-1,1], currently Hom does not allow for this
     
-    -- Collect the generators of H_0(H), they are maps G -> X
     K := trim ker H.dd_0;
-    L := trim HH_0 H;
+    L := HH_0 H;
+    
+    if (opts.Strategy == "Inductive") then (
+        f := map(X,complex R^0,0);
+        
+        -- TODO for homogeneous
+        while (M := coker HH_0 Hom(G,f)) != 0 do ( 
+            Mtrim := trim M;
+            Q := cover Mtrim;
+            -- R^1 -> Q -> Mtrim
+            u := map(Mtrim,Q,id_Q)*Q_{0};
+            -- K -> L -> M -> Mtrim
+            v := inducedMap(Mtrim,M)*map(M,L,id_L)*inducedMap(L,K);
+            h := inducedMap(H_0,K) * (u // v);
+            f = f | homomorphism map(H,(complex R^1),k -> if k==0 then map(H_0,R^1,h));
+        );
+        
+        return f;
+    );
+    
+    -- Collect the generators of H_0(H), they are maps G -> X
+    L = trim L;
     local h;
     local Q;
     if opts.HomogeneousMaps then (
@@ -172,7 +193,7 @@ ghost(Complex,Complex,List) := ComplexMap => opts -> (G,X,L) -> (
     -- Input: G needs to be a complex of projective or free modules
     -- Input: L is a list of integers
     
-    f := fold((a,b) -> a | b,flatten apply(L,n -> apply(components(G[-n]), C -> rightApproximation(C,X, HomogeneousMaps => opts.HomogeneousMaps))));
+    f := fold((a,b) -> a | b,flatten apply(L,n -> apply(components(G[-n]), C -> rightApproximation(C,X, HomogeneousMaps => opts.HomogeneousMaps, Strategy => "Direct"))));
     
     return canonicalMap(cone(f),X)
 )
@@ -1367,6 +1388,34 @@ doc ///
             f = leftApproximation(G,X)
     SeeAlso
         rightApproximation
+///
+
+doc ///
+    Key
+        [rightApproximation,Strategy]
+    Headline
+        choose the strategy used to compute the right approximation
+    Usage
+        rightApproximation(..., Strategy => "Direct")
+        rightApproximation(..., Strategy => "Inductive")
+    Description
+        Text
+            The default value is "Direct".
+        Text
+            For "Direct" the approximation is computed by taking all generators of $H_0 \operatorname{Hom}(G,X)$ as modules over the ring. For "Inductive" it is checked in every step whether the next generator is necessary for the approximation. 
+        Text
+            The startegy "Direct" is usually faster, however the approximation computed with "Inductive" is usually smaller. If the goal is to take approximations over and over, as for ghost, it might be sensible to use "Inductive".
+        Example
+            needsPackage "Complexes"
+            R = ZZ/2[x,y]
+            F = naiveTruncation(koszulComplex basis(3,R),0,1)[1]
+            G = F ** F
+            X = complex R^1
+            elapsedTime rightApproximation(G,X)
+            elapsedTime rightApproximation(G,X,Strategy => "Inductive")
+    SeeAlso
+        rightApproximation
+            
 ///
 
 doc ///
