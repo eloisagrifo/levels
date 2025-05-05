@@ -700,58 +700,20 @@ exts(Module) := List => Y -> (
 supportVariety = method( TypicalValue => Ideal,
                          Options => { Strategy => RankVarietyFast } );
 
-supportVariety(Complex) := Ideal => opts -> (X) -> (
+supportVariety(Complex) := Ideal => opts -> C -> (
     
-    R := ring X;
+    R := ring C;
     
     if opts.Strategy === Koszul then (
         K := complex(R^1/ideal vars R);
-        E := extKoszul(K,X);
+        E := extKoszul(K,C);
         return radical ann(E);
     );
     
-    suppMat := supportMatrices X;
+    suppMat := supportMatrices C;
     toeven := suppMat_0;
     toodd := suppMat_1;
-    
-    --  I := ideal R;
-    --  Q := ring I;
-    --  k := coefficientRing Q;
-    --  Pi := resolutionMap(restrict(X,Q));
-    --  M := source Pi;
-    --  H := higherHomotopies(flatten entries gens I, Pi,floor((length M + 1)/2));
-    --  mu := numgens I;
-    --  Qvars := Q_*;
-    --  a := getSymbol "a";
-    --  S := k(monoid[(Qvars | toList(a_1..a_mu))]);
-    
-    --Produces a polynomial ring with twice as many variables as R.
-    --The peculiar notation in the previous two lines
-    --is required to ensure that the variables of S are hidden from the user.
-    --In particular, the variables in Q_* are
-    --still recognized as variables of Q and not S,
-    --and the code will not break if the variables in Q happen to be called
-    
---      QtoS := map(S,Q,drop(S_*,-mu));
---      
---      odds := select(toList(min M .. max M), o -> odd(o));
---      evens := select(toList(min M .. max M), o -> even(o));
-    
-    -- old code:
-    -- Qvars := Q_*;
-    -- S := k(monoid[(Qvars | toList(a_1..a_mu))]);
-    -- QtoS := map(S,Q,drop(S_*,-mu));
-    -- T := S/ideal drop(S_*,-mu);
-    -- toeven := matrix table(evens, odds, (j,i) -> degreeij(H, {i,j}, QtoS, M.module)) ** T;
-    -- toodd := matrix table(odds, evens, (j,i) -> degreeij(H, {i,j}, QtoS, M.module)) ** T;
-    
-    --  toeven := matrix table(evens, odds, (j,i) -> degreeij(H, {i,j}, QtoS, M.module));
-    --  toodd := matrix table(odds, evens, (j,i) -> degreeij(H, {i,j}, QtoS, M.module));
-    --  T := k(monoid[toList(a_1..a_mu)]);
-    --  StoT := map(T,S, toList(#Qvars : 0_T) | T_*);
-    --  toeven = StoT(toeven);
-    --  toodd = StoT(toodd);
-    
+     
     reven := rank target toeven - rank toeven;
     rodd := rank target toodd - rank toodd;
 
@@ -770,30 +732,30 @@ supportVariety(Complex) := Ideal => opts -> (X) -> (
     return radical intersect(quickMinors(reven, toodd), quickMinors(rodd, toeven))
 )
 
-supportVariety(Module) := Ideal => opts -> (M) -> (
+supportVariety(Module) := Ideal => opts -> M -> (
     supportVariety(complex(M), Strategy => opts.Strategy)
 )
 
-supportVariety(Complex,Complex) := Ideal => opts -> (X,Y) -> (
-    if not(ring X == ring Y) then error "expected complexes over the same ring" else radical ann extKoszul(X,Y)
+supportVariety(Complex,Complex) := Ideal => opts -> (C,D) -> (
+    if not(ring C == ring D) then error "expected complexes over the same ring" else radical ann extKoszul(C,D)
 )
 
 
 supportMatrices = method();
-supportMatrices(Complex) := Ideal => X -> (
-    R := ring X;
+supportMatrices(Complex) := Ideal => C -> (
+    R := ring C;
     I := ideal R;
     Q := ring I;
     k := coefficientRing Q;
-    Pi := resolutionMap(restrict(X,Q));
+    Pi := resolutionMap(restrict(C,Q));
     M := source Pi;
     H := higherHomotopies(flatten entries gens I, Pi,floor((length M + 1)/2));
     mu := numgens I;
    
     Qvars := Q_*;
-    a := getSymbol "a";
+    X := getSymbol "X";
     
-    S := k(monoid[(Qvars | toList(a_1..a_mu))]);
+    S := k(monoid[(Qvars | toList(X_1 .. X_mu))]);
     QtoS := map(S,Q,drop(S_*,-mu));
 
     odds := select(toList(min M .. max M), o -> odd(o));
@@ -802,7 +764,7 @@ supportMatrices(Complex) := Ideal => X -> (
     toeven := matrix table(evens, odds, (j,i) -> degreeij(H, {i,j}, QtoS, M.module));
     toodd := matrix table(odds, evens, (j,i) -> degreeij(H, {i,j}, QtoS, M.module));
     
-    T := k(monoid[toList(a_1..a_mu)]);
+    T := k(monoid[toList(X_1..X_mu)]);
     StoT := map(T,S, toList(#Qvars : 0_T) | T_*);
    
     toeven = StoT(toeven);
@@ -811,7 +773,7 @@ supportMatrices(Complex) := Ideal => X -> (
     {toeven, toodd}
 )
 
-supportMatrices(Module) := Ideal => X -> (supportMatrices(complex(X)))
+supportMatrices(Module) := Ideal => M -> (supportMatrices(complex(M)))
 
 
 ---------------------------------------------------------------
