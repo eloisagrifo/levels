@@ -64,30 +64,33 @@ rightApproximation = method( TypicalValue => ComplexMap,
                                           Strategy => "Direct" } );
 
 rightApproximation(Complex,Complex) := ComplexMap => opts -> (G,X) -> (
-    -- Input: G needs to be a complex of projective or free modules
+    -- Input:   G needs to be a complex of free modules in the degrees
+    --          in which X is concentrated
     
     -- Check that G and X are complexes over the same ring
     R := ring G;
     if not(R === ring X) then error "expected complexes over the same ring";
     
-    -- The Hom-sets in D(Mod(R)) are the homology of H
-    H := Hom(G,X);
-    -- FIXME: We only need H in degrees [-1,1], currently Hom does not allow for this
-    
-    K := ker H.dd_0;
-    L := HH_0 H;
-    
+    -- Strategy:    Construct the approximation one generator of Hom(G,X) at a time
+    --              After each step, check the cokernel of Hom(G,f)
+    --              where f is the constructed map
     if (opts.Strategy == "Inductive") then (
+        if opts.HomogeneousMaps then error "The strategy `Inductive' does not work with homogeneous maps";
+        
+        -- The Hom-sets in D(Mod(R)) are the homology of H
+        H := Hom(G,X);
+        K := ker H.dd_0;
+        L := HH_0 H;
         f := map(X,complex R^0,0);
         
-        -- TODO for homogeneous
+        -- Collect the generators of H_0(H), they are maps G -> X
         while (M := coker HH_0 Hom(G,f)) != 0 do ( 
-            Mtrim := M;
-            Q := cover Mtrim;
-            -- R^1 -> Q -> Mtrim
-            u := map(Mtrim,Q,id_Q)*Q_{0};
+            Mtrim := trim M; -- necessary, otherwise infinite loop!
+            -- R^1 -> Mtrim
+            u := Mtrim_{0};
             -- K -> L -> M -> Mtrim
             v := inducedMap(Mtrim,M)*map(M,L,id_L)*inducedMap(L,K);
+            -- R^1 -> K -> H_0
             h := inducedMap(H_0,K) * (u // v);
             f = f | homomorphism map(H,(complex R^1),k -> if k==0 then map(H_0,R^1,h));
         );
@@ -95,23 +98,42 @@ rightApproximation(Complex,Complex) := ComplexMap => opts -> (G,X) -> (
         return f;
     );
     
+    -- Strategy:    For each summand of G: find a generating set of Hom(Gsmd,X)
+    
+    Gsmds := if opts.Strategy == "Components" then components G else {G};
+
     -- Collect the generators of H_0(H), they are maps G -> X
-    --  L = trim L;
-    local h;
-    local Q;
-    if opts.HomogeneousMaps then (
-        h = inducedMap(H_0,K) * (basis(0,L) // inducedMap(L,K));
-        Q = source h;
-    ) else (
-        Q = cover L;
-        h = inducedMap(H_0,K) * (map(L,Q,id_Q) // inducedMap(L,K));
+    fs := flatten apply(Gsmds, Gsmd -> (
+        H := Hom(Gsmd,X);
+        K := ker H.dd_0;
+        L := HH_0 H;
+        Ltrim := trim L;
+        
+        ufull := if opts.HomogeneousMaps then basis(0,L) else inducedMap(Ltrim,cover Ltrim,generators Ltrim);
+        
+        return apply(numColumns ufull, j -> (
+            -- R^1 -> Ltrim
+            u := ufull_{j};
+            -- K -> L -> Ltrim
+            v := inducedMap(Ltrim,L)*inducedMap(L,K);
+            -- R^1 -> K H_0
+            h := inducedMap(H_0,K) * (u // v);
+            return homomorphism map(H,(complex R^1),k -> if k==0 then map(H_0,R^1,h));
+        ));
+    ));
+        
+    -- check whether all elements in fs are necessary
+    if opts.Strategy == "Components" then (
+        i := 0;
+        while (i < #fs) do (
+            f := fs_i;
+            --  fs = select(fs,g -> (g == f or f*(g // f) - g != 0));
+            fs = select(fs,g -> g == f or not isNullHomotopic(canonicalMap(cone(f),target(f))*g));
+            i = i+1;
+        );
     );
     
-    -- for each generator of Q pick the corresponding map G -> X
-    generatorToMorphism := (j) -> homomorphism(map(H,(complex R^1),k -> if k==0 then map(H_0,R^1,h*Q_{j})));
-    
-    -- Combine all the maps G -> X
-    return fold((a,b) -> a | b,map(X,(complex (ring G)^0),0),apply(toList(0..(rank Q-1)),j -> generatorToMorphism(j)))
+    return fold((a,b) -> a | b, map(X,complex R^0,0),fs);
 )
 
 -- Creates a right R-approximation
@@ -1307,11 +1329,11 @@ doc ///
             a map with target $X$ through which every map G -> X factors
     Description
         Text
-            A map $f \colon H \to X$ is a right approximation with respect to $G$ if every map $G \to X$ factors through $f$ in the homotopy category. 
+            A map $f \colon H \to X$ is a right approximation with respect to $G$ if every map $G \to X$ factors through $f$ in the homotopy category. This function computes the right approximation in the derived category. The complex $G$ needs to be a complex of free modules in the degrees in which $X$ is concentrated.
         Example
             needsPackage "Complexes";
             R = QQ[x]
-            X = freeResolution(R^1/ideal(x^2))
+            X = complex(R^1/ideal(x^2))
             G = freeResolution(R^1/ideal(x))
             f = rightApproximation(G,X)
         Text
@@ -1358,23 +1380,32 @@ doc ///
     Headline
         choose the strategy used to compute the right approximation
     Usage
+        rightApproximation(..., Strategy => "Components")
         rightApproximation(..., Strategy => "Direct")
-        rightApproximation(..., Strategy => "Inductive")
+        --  rightApproximation(..., Strategy => "Inductive")
     Description
         Text
             The default value is "Direct".
         Text
-            For "Direct" the approximation is computed by taking all generators of $H_0 \operatorname{Hom}(G,X)$ as modules over the ring. For "Inductive" it is checked in every step whether the next generator is necessary for the approximation. 
+            For "Direct", the approximation is computed by taking all generators of $H_0 \operatorname{Hom}(G,X)$ as modules over the ring, and takes their sum. For "Components", for each summand of $G$ all generators are taken, and at the end it is checked, whether any of the generators are superfluous; that is any morphism that factors through one of the others is dropped. 
+            --  For "Inductive", one generator at a time is taken, and then the quotient is considered for the next step.
         Text
-            The startegy "Direct" is usually faster, however the approximation computed with "Inductive" is usually smaller. If the goal is to take approximations over and over, as for ghost, it might be sensible to use "Inductive".
+            The strategy "Direct" is generally faster, however the approximation computed with "Components" is generally smaller. 
         Example
             needsPackage "Complexes"
             R = ZZ/2[x,y]
-            F = naiveTruncation(koszulComplex basis(3,R),0,1)[1]
+            F = naiveTruncation(koszulComplex basis(1,R),0,1)[1]
             G = F ** F
             X = complex R^1
-            elapsedTime rightApproximation(G,X)
-            elapsedTime rightApproximation(G,X,Strategy => "Inductive")
+            rightApproximation(G,X)
+            rightApproximation(G,X,Strategy => "Components")
+        Example
+            needsPackage "Complexes"
+            R = ZZ/101[x,y]/ideal(x^2)
+            F = freeResolution(R^1/ideal(x),LengthLimit => 3);
+            M = coker map(R^{0,-2},R^{-1,-3},matrix{{x,y^3},{0,-x}}) 
+            rightApproximation(F ++ complex R^1,complex M)
+            rightApproximation(F ++ complex R^1,complex M, Strategy => "Components")
     SeeAlso
         rightApproximation
             
@@ -2039,6 +2070,33 @@ doc ///
 -- Tests
 -----------------------------------------------------------
 -----------------------------------------------------------
+
+-----------------------------------------------------------
+-- rightApproximation
+-----------------------------------------------------------
+TEST ///
+    needsPackage "Complexes"
+    R = ZZ/101[x]
+    G = koszulComplex vars R
+    X = G
+    g = rightApproximation(G,X)
+    f = id_X
+    assert(isNullHomotopic(canonicalMap(cone(g),target g)*f))
+///
+
+TEST ///
+    needsPackage "Complexes"
+    R = ZZ/101[x,y]/ideal(x^2*y)
+    G = koszulComplex {x^2}
+    X = koszulComplex {x*y}
+    g = rightApproximation(G,X)
+    f = map(X,G,{map(X_0,G_0,y),map(X_1,G_1,x)})
+    assert(isNullHomotopic(canonicalMap(cone(g),target g)*f))
+    f = map(X,G,{map(X_0,G_0,0),map(X_1,G_1,x)})
+    assert(isNullHomotopic(canonicalMap(cone(g),target g)*f))
+    f = map(X,G,{map(X_0,G_0,y),map(X_1,G_1,0)})
+    assert(isNullHomotopic(canonicalMap(cone(g),target g)*f))
+///
 
 -----------------------------------------------------------
 -- level
