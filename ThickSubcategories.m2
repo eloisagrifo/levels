@@ -556,7 +556,11 @@ higherHomotopies(List,ComplexMap,ZZ) := (Igens,Pi,D) -> (
            )
        );  
  
-       nullhomotopies = apply(allmaps, o -> complex nullhomotopy chainComplex o);
+--       nullhomotopies = apply(allmaps, o -> complex nullhomotopy chainComplex o);
+--	  With the death of ChainComplexes, we killed the old code and replaced it with the new
+--    nullhomotopy from Complexes
+      nullhomotopies = apply(allmaps, o -> nullHomotopy o);
+
 
        scan( toList(0 .. (#e - 1)) ** toList(min M .. max M - 2*d + 2), W -> (
            j := W_0;
