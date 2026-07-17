@@ -725,7 +725,7 @@ exts(Module) := List => Y -> (
 
 --support variety
 supportVariety = method( TypicalValue => Ideal,
-                         Options => { Strategy => RankVarietyFast } );
+                         Options => { Strategy => Koszul } );
 
 supportVariety(Complex) := Ideal => opts -> C -> (
     
